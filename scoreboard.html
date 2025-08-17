@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Darts Scoreboard</title>
+<style>
+body {
+  background: #000;
+  color: #fff;
+  font-family: 'Arial', sans-serif;
+  margin: 0; padding: 20px;
+  text-align: center;
+}
+h1 {
+  color: #ffcc00;
+}
+.player {
+  margin: 20px auto;
+  width: 250px;
+  padding: 10px;
+  border: 2px solid #ffcc00;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: left;
+  gap: 15px;
+}
+.player img {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+.score {
+  font-size: 2rem;
+  margin-left: auto;
+}
+#freezeOverlay {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.95);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.5s ease;
+  z-index: 100000;
+}
+#freezeOverlay.visible {
+  opacity: 1;
+  pointer-events: all;
+}
+#freezeOverlay img {
+  max-width: 70vw;
+  max-height: 70vh;
+  object-fit: contain;
+  filter: drop-shadow(0 0 10px #ffcc00);
+}
+</style>
+</head>
+<body>
+
+<h1>Darts Scoreboard</h1>
+
+<div id="playersContainer"></div>
+
+<div id="freezeOverlay" class="hidden">
+  <img src="assets/Logo.png" alt="Freeze Screen" />
+</div>
+
+<script>
+let players = [];
+let playerPics = {};
+let scores = {};
+let freeze = false;
+
+function loadData() {
+  players = JSON.parse(localStorage.getItem("dartsPlayers") || "[]");
+  playerPics = JSON.parse(localStorage.getItem("dartsPlayerPics") || "{}");
+  scores = JSON.parse(localStorage.getItem("dartsScores") || "{}");
+  freeze = localStorage.getItem("dartsFreezeScreen") === "true";
+  updateFreezeScreen();
+}
+
+function renderScores() {
+  const container = document.getElementById("playersContainer");
+  container.innerHTML = players.map(p => {
+    const pic = playerPics[p] || "assets/default_player.png";
+    const score = scores[p] ?? 0;
+    return `
+    <div class="player">
+      <img src="${pic}" alt="${p}" />
+      <div>${p}</div>
+      <div class="score">${score}</div>
+    </div>
+    `;
+  }).join("");
+}
+
+function updateFreezeScreen() {
+  const overlay = document.getElementById("freezeOverlay");
+  if (freeze) {
+    overlay.classList.add("visible");
+  } else {
+    overlay.classList.remove("visible");
+  }
+}
+
+function refreshData() {
+  loadData();
+  renderScores();
+}
+
+window.addEventListener("load", () => {
+  refreshData();
+
+  // Refresh every 5 seconds
+  setInterval(refreshData, 5000);
+});
+</script>
+
+</body>
+</html>
