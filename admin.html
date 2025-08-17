@@ -61,6 +61,7 @@
 
   <div class="score-input" id="scoreInput" style="display:none;">
     <h2>Enter Score</h2>
+    <div id="matchTitle"></div>
     <div id="currentTurn"></div>
     <input type="number" id="score" min="0" max="180">
     <button onclick="submitScore()">Submit</button>
@@ -72,8 +73,15 @@
     let players = [];
     let scores = {};
     let currentPlayerIndex = 0;
-    let gameStarted = false;
     let gameMode = 501;
+    let isTournament = false;
+
+    // Tournament state
+    let tournamentMatches = [];
+    let currentMatchIndex = 0;
+    let matchScores = {};
+    let matchWinners = [];
+    let matchLosers = [];
 
     function addPlayer() {
       const name = document.getElementById('playerName').value.trim();
@@ -91,18 +99,16 @@
     }
 
     function startGame() {
-      if (players.length < 2) {
-        alert("Add at least 2 players.");
+      if (players.length !== 4) {
+        alert("Tournament mode currently supports exactly 4 players.");
         return;
       }
 
       gameMode = document.getElementById('gameMode').value;
-      const isTournament = document.getElementById('tournamentMode').checked;
+      isTournament = document.getElementById('tournamentMode').checked;
 
-      // Shuffle players if tournament
-      if (isTournament) {
-        players.sort(() => 0.5 - Math.random());
-      }
+      // Shuffle players
+      players.sort(() => 0.5 - Math.random());
 
       scores = {};
       for (let p of players) {
@@ -113,54 +119,111 @@
         };
       }
 
-      currentPlayerIndex = 0;
-      gameStarted = true;
+      if (isTournament) {
+        tournamentMatches = [
+          [players[0], players[1]], // Round 1 - Match 1
+          [players[2], players[3]], // Round 1 - Match 2
+          [], // Winner match
+          []  // Loser match
+        ];
+        currentMatchIndex = 0;
+      }
 
       document.getElementById('scoreInput').style.display = 'block';
-      localStorage.setItem('darts_game', JSON.stringify({ players, scores, currentPlayerIndex, gameMode }));
+      startMatch();
+    }
 
-      log(`Game started: Mode ${gameMode}`);
+    function startMatch() {
+      const match = tournamentMatches[currentMatchIndex];
+      matchScores = {};
+      currentPlayerIndex = 0;
+
+      for (let p of match) {
+        scores[p].score = parseInt(gameMode);
+        scores[p].history = [];
+        scores[p].average = 0;
+        matchScores[p] = scores[p];
+      }
+
+      localStorage.setItem('darts_game', JSON.stringify({
+        mode: gameMode,
+        players: match,
+        scores: matchScores,
+        currentPlayerIndex,
+        isTournament,
+        tournamentState: {
+          matchIndex: currentMatchIndex,
+          fullMatches: tournamentMatches
+        }
+      }));
+
+      document.getElementById('matchTitle').textContent = `Match: ${match[0]} vs ${match[1]}`;
       updateCurrentTurn();
+      log(`Started match: ${match[0]} vs ${match[1]}`);
     }
 
     function updateCurrentTurn() {
-      const player = players[currentPlayerIndex];
-      document.getElementById('currentTurn').textContent = `Current Player: ${player} (Score: ${scores[player].score})`;
+      const match = tournamentMatches[currentMatchIndex];
+      const player = match[currentPlayerIndex];
+      document.getElementById('currentTurn').textContent = `Current Player: ${player} (Score: ${matchScores[player].score})`;
     }
 
     function submitScore() {
+      const match = tournamentMatches[currentMatchIndex];
+      const player = match[currentPlayerIndex];
       const val = parseInt(document.getElementById('score').value);
+
       if (isNaN(val) || val < 0 || val > 180) return;
 
-      const player = players[currentPlayerIndex];
-      let playerScore = scores[player].score;
-      const newScore = playerScore - val;
+      const newScore = matchScores[player].score - val;
 
       if (newScore < 0) {
         log(`${player} busts with ${val}!`);
       } else {
-        scores[player].score = newScore;
-        scores[player].history.push(val);
-        const total = scores[player].history.reduce((a, b) => a + b, 0);
-        scores[player].average = (total / scores[player].history.length).toFixed(2);
+        matchScores[player].score = newScore;
+        matchScores[player].history.push(val);
+        const total = matchScores[player].history.reduce((a, b) => a + b, 0);
+        matchScores[player].average = (total / matchScores[player].history.length).toFixed(2);
 
         if (newScore === 0) {
-          log(`${player} wins the game!`);
-          alert(`${player} wins!`);
-          localStorage.removeItem('darts_game');
-          gameStarted = false;
+          log(`${player} wins the match!`);
+          if (currentMatchIndex === 0 || currentMatchIndex === 1) {
+            matchWinners.push(player);
+            matchLosers.push(match.find(p => p !== player));
+          } else if (currentMatchIndex === 2) {
+            log(`🏆 Tournament Winner: ${player}`);
+          } else {
+            log(`🥉 3rd Place Winner: ${player}`);
+          }
+
+          currentMatchIndex++;
+          if (currentMatchIndex === 2) {
+            tournamentMatches[2] = [matchWinners[0], matchWinners[1]];
+            tournamentMatches[3] = [matchLosers[0], matchLosers[1]];
+            startMatch();
+          } else if (currentMatchIndex === 4) {
+            document.getElementById('scoreInput').style.display = 'none';
+            showFinalResults();
+          } else {
+            startMatch();
+          }
           return;
         }
       }
 
-      currentPlayerIndex = (currentPlayerIndex + 1) % players.length;
-      localStorage.setItem('darts_game', JSON.stringify({ players, scores, currentPlayerIndex, gameMode }));
+      currentPlayerIndex = (currentPlayerIndex + 1) % 2;
       updateCurrentTurn();
-      updateScoreboard();
-    }
-
-    function updateScoreboard() {
-      localStorage.setItem('darts_game', JSON.stringify({ players, scores, currentPlayerIndex, gameMode }));
+      localStorage.setItem('darts_game', JSON.stringify({
+        mode: gameMode,
+        players: match,
+        scores: matchScores,
+        currentPlayerIndex,
+        isTournament,
+        tournamentState: {
+          matchIndex: currentMatchIndex,
+          fullMatches: tournamentMatches
+        }
+      }));
     }
 
     function log(message) {
@@ -168,6 +231,18 @@
       logEl.innerHTML += `<div>${new Date().toLocaleTimeString()}: ${message}</div>`;
       logEl.scrollTop = logEl.scrollHeight;
     }
+
+    function showFinalResults() {
+      const placements = [
+        matchWinners[0], // 1st
+        matchWinners[1], // 2nd
+        matchLosers[0],  // 3rd
+        matchLosers[1]   // 4th
+      ];
+
+      localStorage.setItem('darts_final_results', JSON.stringify(placements));
+    }
   </script>
 </body>
 </html>
+
