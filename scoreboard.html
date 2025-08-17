@@ -5,405 +5,197 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Darts Scoreboard</title>
 <style>
-  body {
-    background: #111;
-    color: #ffcc00;
-    font-family: Arial, sans-serif;
-    margin: 0;
-    padding: 20px;
-    user-select: none;
-  }
-  h1 {
-    text-align: center;
-    margin-bottom: 0;
-  }
-  #dartboard {
-    margin: 20px auto;
-    display: block;
-    width: 420px;
-    height: 420px;
-    cursor: pointer;
-    filter: drop-shadow(0 0 5px #ffcc00);
-    background: #111;
-    border-radius: 50%;
-  }
-  #scoreTable {
-    margin: 0 auto 30px;
-    width: 90%;
-    max-width: 600px;
-    border-collapse: collapse;
-    background: #222;
-    border-radius: 10px;
-    overflow: hidden;
-  }
-  #scoreTable th, #scoreTable td {
-    padding: 10px;
-    text-align: center;
-    border-bottom: 1px solid #444;
-  }
-  #scoreTable th {
-    background: #444;
-  }
-  .winner {
-    color: #0f0;
-    font-weight: bold;
-  }
-  .loser {
-    color: #f00;
-    font-weight: bold;
-  }
-  .current-turn {
-    font-weight: bold;
-    background: #333;
-  }
-  /* Dart marker */
-  .dart {
-    fill: #ffcc00;
-    stroke: black;
-    stroke-width: 1;
-    opacity: 0.9;
-    pointer-events: none;
-    transform-origin: center;
-    transition: transform 0.6s ease, opacity 0.6s ease;
-  }
+body {
+background: radial-gradient(circle at center, #0a0a0a 0%, #121212 90%);
+color: #ffcc00;
+font-family: 'Arial Black', Arial, sans-serif;
+margin: 0;
+padding: 30px;
+user-select: none;
+}
+h1 {
+text-align: center;
+font-size: 3rem;
+margin-bottom: 10px;
+text-shadow: 0 0 8px #ffcc00;
+}
+#matchInfo {
+text-align: center;
+font-size: 1.5rem;
+margin-bottom: 20px;
+letter-spacing: 1px;
+}
+#scoreTable {
+margin: 0 auto;
+width: 400px;
+border-collapse: collapse;
+}
+#scoreTable th, #scoreTable td {
+border: 2px solid #ffcc00;
+padding: 15px 10px;
+font-size: 1.4rem;
+text-align: center;
+}
+#scoreTable th {
+background: #333300;
+}
+#scoreTable td.playerName {
+font-weight: bold;
+text-align: left;
+padding-left: 20px;
+}
+#popup {
+position: fixed;
+top: 15%;
+left: 50%;
+transform: translate(-50%, -50%);
+background: #222200;
+border: 3px solid #ffcc00;
+color: #fff;
+font-size: 2rem;
+padding: 20px 40px;
+border-radius: 10px;
+box-shadow: 0 0 15px #ffcc00;
+opacity: 0;
+pointer-events: none;
+transition: opacity 0.3s ease;
+z-index: 1000;
+}
+#finalResults {
+max-width: 500px;
+margin: 40px auto 0;
+background: #222200cc;
+border: 2px solid #ffcc00;
+border-radius: 12px;
+padding: 20px;
+}
+#finalResults h2 {
+text-align: center;
+margin-bottom: 15px;
+}
+#finalResults ol {
+font-size: 1.3rem;
+padding-left: 20px;
+}
 </style>
 </head>
 <body>
 
 <h1>Darts Scoreboard</h1>
+<div id="matchInfo">Waiting for game to start...</div>
 
-<svg id="dartboard" viewBox="0 0 420 420" aria-label="Dartboard" role="img"></svg>
-
-<table id="scoreTable" aria-live="polite" aria-atomic="true" aria-relevant="all">
-  <thead>
-    <tr>
-      <th>Player</th>
-      <th>Score</th>
-      <th>Last Score</th>
-      <th>Status</th>
-    </tr>
-  </thead>
-  <tbody></tbody>
+<table id="scoreTable" hidden>
+<thead>
+<tr><th>Player</th><th>Score</th><th>Average</th></tr>
+</thead>
+<tbody id="scoreBody"></tbody>
 </table>
 
+<div id="finalResults" hidden>
+<h2>Tournament Results</h2>
+<ol id="finalList"></ol>
+</div>
+
+<div id="popup"></div>
+
 <script>
-(() => {
-  // Dartboard params
-  const segmentOrder = [20,1,18,4,13,9,14,11,8,16,7,19,3,17,2,15,10,6,5,12];
-  const boardSize = 420;
-  const center = boardSize/2;
-  const radii = {
-    outer: 200,
-    doubleInner: 190,
-    doubleOuter: 200,
-    tripleInner: 125,
-    tripleOuter: 140,
-    outerBull: 25,
-    bull: 12,
-  };
+const matchInfo = document.getElementById("matchInfo");
+const scoreTable = document.getElementById("scoreTable");
+const scoreBody = document.getElementById("scoreBody");
+const popup = document.getElementById("popup");
+const finalResults = document.getElementById("finalResults");
+const finalList = document.getElementById("finalList");
 
-  const dartboard = document.getElementById('dartboard');
-  const scoreTableBody = document.querySelector('#scoreTable tbody');
+let lastPopupTimestamp = 0;
 
-  // Players and state
-  const players = [
-    {name: 'Player 1', score: 501, lastScore: 0, status: ''},
-    {name: 'Player 2', score: 501, lastScore: 0, status: ''}
-  ];
-  let currentPlayerIndex = 0;
-  let throwsThisTurn = [];
+function renderScores(data) {
+const { players, scores, currentPlayerIndex } = data;
 
-  // Polar to Cartesian helper
-  function polarToCartesian(cx, cy, radius, angleInDegrees) {
-    const angleInRadians = (angleInDegrees) * Math.PI / 180.0;
-    return {
-      x: cx + (radius * Math.cos(angleInRadians)),
-      y: cy + (radius * Math.sin(angleInRadians))
-    };
-  }
+if (!players || players.length === 0) {
+matchInfo.textContent = "Waiting for game to start...";
+scoreTable.hidden = true;
+return;
+}
 
-  // Draw dartboard segments
-  function drawDartboard() {
-    dartboard.innerHTML = ''; // Clear
+matchInfo.textContent = `Match: ${players[0]} vs ${players[1]} — Current Turn: ${players[currentPlayerIndex]}`;
 
-    // Outer circle background
-    const bgCircle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
-    bgCircle.setAttribute("cx", center);
-    bgCircle.setAttribute("cy", center);
-    bgCircle.setAttribute("r", radii.outer);
-    bgCircle.setAttribute("fill", "#111");
-    dartboard.appendChild(bgCircle);
+scoreBody.innerHTML = players.map((p) => {
+const s = scores[p];
+const avg = s.average || 0;
+return `<tr>
+<td class="playerName">${p}</td>
+<td>${s.score}</td>
+<td>${avg}</td>
+</tr>`;
+}).join("");
+scoreTable.hidden = false;
+finalResults.hidden = true;
+}
 
-    const sliceAngle = 360 / 20;
-    for(let i=0; i<20; i++) {
-      const startAngle = (sliceAngle * i) - 9;
-      const endAngle = startAngle + sliceAngle;
+function showPopupMessage(message) {
+popup.textContent = message;
+popup.style.opacity = "1";
+popup.style.pointerEvents = "auto";
 
-      // Double ring
-      const p1 = polarToCartesian(center, center, radii.doubleOuter, endAngle);
-      const p2 = polarToCartesian(center, center, radii.doubleOuter, startAngle);
-      const p3 = polarToCartesian(center, center, radii.doubleInner, startAngle);
-      const p4 = polarToCartesian(center, center, radii.doubleInner, endAngle);
-      const doublePath = `
-        M ${p1.x} ${p1.y}
-        A ${radii.doubleOuter} ${radii.doubleOuter} 0 0 0 ${p2.x} ${p2.y}
-        L ${p3.x} ${p3.y}
-        A ${radii.doubleInner} ${radii.doubleInner} 0 0 1 ${p4.x} ${p4.y}
-        Z
-      `;
-      const doubleSegment = document.createElementNS("http://www.w3.org/2000/svg", "path");
-      doubleSegment.setAttribute("d", doublePath);
-      doubleSegment.setAttribute("fill", i % 2 === 0 ? "#007700" : "#cc0000");
-      dartboard.appendChild(doubleSegment);
+setTimeout(() => {
+popup.style.opacity = "0";
+popup.style.pointerEvents = "none";
+}, 2000);
+}
 
-      // Triple ring
-      const p5 = polarToCartesian(center, center, radii.tripleOuter, endAngle);
-      const p6 = polarToCartesian(center, center, radii.tripleOuter, startAngle);
-      const p7 = polarToCartesian(center, center, radii.tripleInner, startAngle);
-      const p8 = polarToCartesian(center, center, radii.tripleInner, endAngle);
-      const triplePath = `
-        M ${p5.x} ${p5.y}
-        A ${radii.tripleOuter} ${radii.tripleOuter} 0 0 0 ${p6.x} ${p6.y}
-        L ${p7.x} ${p7.y}
-        A ${radii.tripleInner} ${radii.tripleInner} 0 0 1 ${p8.x} ${p8.y}
-        Z
-      `;
-      const tripleSegment = document.createElementNS("http://www.w3.org/2000/svg", "path");
-      tripleSegment.setAttribute("d", triplePath);
-      tripleSegment.setAttribute("fill", i % 2 === 0 ? "#cc0000" : "#007700");
-      dartboard.appendChild(tripleSegment);
+// Listen for popup messages from localStorage
+function checkForPopup() {
+const popupData = localStorage.getItem("darts_popup");
+if (!popupData) return;
+try {
+const { message, timestamp } = JSON.parse(popupData);
+if (timestamp > lastPopupTimestamp) {
+lastPopupTimestamp = timestamp;
+showPopupMessage(message);
+}
+} catch (e) {
+// ignore parse errors
+}
+}
 
-      // Outer single segment (between tripleOuter and doubleInner)
-      const p9 = polarToCartesian(center, center, radii.outer, endAngle);
-      const p10 = polarToCartesian(center, center, radii.outer, startAngle);
-      const p11 = polarToCartesian(center, center, radii.tripleOuter, startAngle);
-      const p12 = polarToCartesian(center, center, radii.tripleOuter, endAngle);
-      const outerSinglePath = `
-        M ${p9.x} ${p9.y}
-        A ${radii.outer} ${radii.outer} 0 0 0 ${p10.x} ${p10.y}
-        L ${p11.x} ${p11.y}
-        A ${radii.tripleOuter} ${radii.tripleOuter} 0 0 1 ${p12.x} ${p12.y}
-        Z
-      `;
-      const outerSingle = document.createElementNS("http://www.w3.org/2000/svg", "path");
-      outerSingle.setAttribute("d", outerSinglePath);
-      outerSingle.setAttribute("fill", i % 2 === 0 ? "#000" : "#fff");
-      dartboard.appendChild(outerSingle);
+// Listen for game updates from localStorage
+function updateFromStorage() {
+const gameDataRaw = localStorage.getItem("darts_game");
+if (gameDataRaw) {
+const data = JSON.parse(gameDataRaw);
+renderScores(data);
+finalResults.hidden = true;
+} else {
+// Check if final results are saved
+const finalRaw = localStorage.getItem("darts_final_results");
+if (finalRaw) {
+renderFinalResults(JSON.parse(finalRaw));
+} else {
+matchInfo.textContent = "Waiting for game to start...";
+scoreTable.hidden = true;
+finalResults.hidden = true;
+}
+}
+}
 
-      // Inner single segment (between doubleInner and tripleInner)
-      const p13 = polarToCartesian(center, center, radii.doubleInner, endAngle);
-      const p14 = polarToCartesian(center, center, radii.doubleInner, startAngle);
-      const p15 = polarToCartesian(center, center, radii.tripleInner, startAngle);
-      const p16 = polarToCartesian(center, center, radii.tripleInner, endAngle);
-      const innerSinglePath = `
-        M ${p13.x} ${p13.y}
-        A ${radii.doubleInner} ${radii.doubleInner} 0 0 0 ${p14.x} ${p14.y}
-        L ${p15.x} ${p15.y}
-        A ${radii.tripleInner} ${radii.tripleInner} 0 0 1 ${p16.x} ${p16.y}
-        Z
-      `;
-      const innerSingle = document.createElementNS("http://www.w3.org/2000/svg", "path");
-      innerSingle.setAttribute("d", innerSinglePath);
-      innerSingle.setAttribute("fill", i % 2 === 0 ? "#fff" : "#000");
-      dartboard.appendChild(innerSingle);
+// Render tournament final results
+function renderFinalResults(placements) {
+matchInfo.textContent = "Tournament Complete!";
+scoreTable.hidden = true;
+finalResults.hidden = false;
+finalList.innerHTML = placements
+.map((p, i) => `<li><strong>Place ${i + 1}:</strong> ${p}</li>`)
+.join("");
+}
 
-      // Bullseye rings
-      if (i === 0) {
-        // Outer bull (25)
-        const outerBullCircle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
-        outerBullCircle.setAttribute("cx", center);
-        outerBullCircle.setAttribute("cy", center);
-        outerBullCircle.setAttribute("r", radii.outerBull);
-        outerBullCircle.setAttribute("fill", "#00cc00");
-        dartboard.appendChild(outerBullCircle);
+// Periodically check localStorage for updates
+setInterval(() => {
+checkForPopup();
+updateFromStorage();
+}, 500);
 
-        // Bullseye (50)
-        const bullCircle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
-        bullCircle.setAttribute("cx", center);
-        bullCircle.setAttribute("cy", center);
-        bullCircle.setAttribute("r", radii.bull);
-        bullCircle.setAttribute("fill", "#cc0000");
-        dartboard.appendChild(bullCircle);
-      }
-
-      // Numbers
-      const angleRad = (sliceAngle * i - 90) * Math.PI / 180;
-      const numX = center + Math.cos(angleRad) * (radii.outer + 22);
-      const numY = center + Math.sin(angleRad) * (radii.outer + 22);
-      const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
-      text.setAttribute("x", numX);
-      text.setAttribute("y", numY + 7); // vertical adjust
-      text.setAttribute("font-size", "24");
-      text.setAttribute("font-weight", "bold");
-      text.setAttribute("fill", "#ffcc00");
-      text.setAttribute("text-anchor", "middle");
-      text.setAttribute("pointer-events", "none");
-      text.style.textShadow = "0 0 5px black";
-      text.textContent = segmentOrder[i];
-      dartboard.appendChild(text);
-    }
-  }
-
-  // Calculate score for click coordinates on board
-  function getScoreFromCoords(x, y) {
-    const dx = x - center;
-    const dy = y - center;
-    const dist = Math.sqrt(dx*dx + dy*dy);
-
-    if (dist > radii.outer) return 0; // outside board
-
-    let angle = Math.atan2(dy, dx) * 180 / Math.PI;
-    angle = (angle + 450) % 360; // rotate so 0 at top
-
-    const segmentIndex = Math.floor(angle / 18);
-    const segmentValue = segmentOrder[segmentIndex];
-
-    // Check ring for multiplier
-    if (dist >= radii.doubleInner && dist <= radii.doubleOuter) {
-      return segmentValue * 2;
-    } else if (dist >= radii.tripleInner && dist <= radii.tripleOuter) {
-      return segmentValue * 3;
-    } else if (dist <= radii.bull) {
-      return 50;
-    } else if (dist <= radii.outerBull) {
-      return 25;
-    } else {
-      return segmentValue;
-    }
-  }
-
-  // Render scoreboard table
-  function renderScoreboard() {
-    scoreTableBody.innerHTML = '';
-    players.forEach((player, i) => {
-      const tr = document.createElement('tr');
-      if (i === currentPlayerIndex) tr.classList.add('current-turn');
-      const nameTd = document.createElement('td');
-      nameTd.textContent = player.name;
-      const scoreTd = document.createElement('td');
-      scoreTd.textContent = player.score;
-      const lastTd = document.createElement('td');
-      lastTd.textContent = player.lastScore > 0 ? player.lastScore : '-';
-      const statusTd = document.createElement('td');
-      statusTd.textContent = player.status;
-
-      tr.appendChild(nameTd);
-      tr.appendChild(scoreTd);
-      tr.appendChild(lastTd);
-      tr.appendChild(statusTd);
-      scoreTableBody.appendChild(tr);
-    });
-  }
-
-  // Animate dart hit on board
-  function animateDart(x, y) {
-    const dart = document.createElementNS("http://www.w3.org/2000/svg", "circle");
-    dart.setAttribute("cx", x);
-    dart.setAttribute("cy", y);
-    dart.setAttribute("r", 8);
-    dart.setAttribute("class", "dart");
-    dartboard.appendChild(dart);
-
-    // Scale from 0 to 1.2 and back to 1, then fade out
-    dart.style.transform = "scale(0)";
-    setTimeout(() => {
-      dart.style.transform = "scale(1.2)";
-      setTimeout(() => {
-        dart.style.transform = "scale(1)";
-        setTimeout(() => {
-          dart.style.opacity = "0";
-          setTimeout(() => {
-            dart.remove();
-          }, 600);
-        }, 400);
-      }, 200);
-    }, 20);
-  }
-
-  // Process a throw on board click
-  function processThrow(event) {
-    if (players[currentPlayerIndex].status === 'BUST' || players[currentPlayerIndex].status === 'WINNER') {
-      return; // no throw after game ended for player
-    }
-
-    const rect = dartboard.getBoundingClientRect();
-    const x = event.clientX - rect.left;
-    const y = event.clientY - rect.top;
-
-    const score = getScoreFromCoords(x, y);
-    if (score === 0) {
-      alert("Missed the board!");
-      return;
-    }
-
-    animateDart(x, y);
-
-    let player = players[currentPlayerIndex];
-
-    let newScore = player.score - score;
-
-    if (newScore < 0) {
-      // Bust: revert turn, no score change
-      player.status = 'BUST';
-      player.lastScore = 0;
-      throwsThisTurn = [];
-      switchPlayer();
-    } else if (newScore === 0) {
-      // Win only if last dart lands on a double or bull (simplified: double ring or bull(50))
-      // Calculate ring for last hit
-      const dx = x - center;
-      const dy = y - center;
-      const dist = Math.sqrt(dx*dx + dy*dy);
-
-      let isDoubleFinish = false;
-      if (dist >= radii.doubleInner && dist <= radii.doubleOuter) {
-        isDoubleFinish = true;
-      } else if (dist <= radii.bull) {
-        isDoubleFinish = true;
-      }
-
-      if (isDoubleFinish) {
-        player.score = 0;
-        player.lastScore = score;
-        player.status = 'WINNER';
-        renderScoreboard();
-        alert(`${player.name} wins! 🎉`);
-        dartboard.removeEventListener('click', processThrow);
-      } else {
-        // Bust because no double finish
-        player.status = 'BUST';
-        player.lastScore = 0;
-        throwsThisTurn = [];
-        switchPlayer();
-      }
-    } else {
-      player.score = newScore;
-      player.lastScore = score;
-      player.status = '';
-      throwsThisTurn.push(score);
-      if (throwsThisTurn.length >= 3) {
-        // End turn after 3 throws
-        throwsThisTurn = [];
-        switchPlayer();
-      }
-    }
-
-    renderScoreboard();
-  }
-
-  // Switch to next player
-  function switchPlayer() {
-    currentPlayerIndex = (currentPlayerIndex + 1) % players.length;
-    players.forEach(p => p.status = ''); // clear all statuses
-  }
-
-  // Initialize
-  drawDartboard();
-  renderScoreboard();
-
-  dartboard.addEventListener('click', processThrow);
-
-})();
+// Initial update on load
+updateFromStorage();
 </script>
 
 </body>
