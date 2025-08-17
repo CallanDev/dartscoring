@@ -5,267 +5,149 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Darts Scoreboard</title>
 <style>
-  html, body {
-    margin: 0; padding: 0; height: 100%;
-    background: radial-gradient(circle at center, #0a0a0a 0%, #121212 90%);
-    color: #ffcc00;
-    font-family: 'Arial Black', Arial, sans-serif;
-    user-select: none;
-  }
-  h1 {
-    text-align: center;
-    font-size: 3rem;
-    margin: 20px 0 10px;
-    text-shadow: 0 0 8px #ffcc00;
-  }
-  #matchInfo {
-    text-align: center;
-    font-size: 1.5rem;
-    margin-bottom: 20px;
-    letter-spacing: 1px;
-  }
-  #scoreTable {
-    width: 100%;
-    max-width: 100%;
-    border-collapse: collapse;
-    margin: 0 auto;
-  }
-  #scoreTable th, #scoreTable td {
-    border: 3px solid #ffcc00;
-    padding: 20px 15px;
-    font-size: 1.8rem;
-    text-align: center;
-  }
-  #scoreTable th {
-    background: #333300;
-  }
-  #scoreTable td.playerName {
-    font-weight: bold;
-    text-align: left;
-    padding-left: 30px;
-  }
-  #scoreTable td.lastThrow {
-    color: #00ff00;
-    font-weight: bold;
-  }
-  #popup {
-    position: fixed;
-    top: 0; left: 0; width: 100vw; height: 100vh;
-    background: rgba(34, 34, 0, 0.9);
-    color: #fff;
-    font-size: 5rem;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    text-align: center;
-    font-weight: 900;
-    letter-spacing: 2px;
-    z-index: 9999;
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity 0.5s ease;
-  }
-  #finalResults {
-    max-width: 600px;
-    margin: 40px auto 0;
-    background: #222200cc;
-    border: 3px solid #ffcc00;
-    border-radius: 15px;
-    padding: 30px;
-    font-size: 1.5rem;
-  }
-  #finalResults h2 {
-    text-align: center;
-    margin-bottom: 25px;
-  }
-  #finalResults ol {
-    font-size: 1.5rem;
-    padding-left: 30px;
-  }
-  /* Winner animation */
-  @keyframes winnerFlash {
-    0%, 100% { text-shadow: 0 0 30px #ffcc00, 0 0 60px #ffcc00, 0 0 90px #ffcc00; color: #ffcc00;}
-    50% { text-shadow: 0 0 10px #fff, 0 0 30px #fff; color: #fff;}
-  }
-  #winnerAnimation {
-    position: fixed;
-    top: 50%; left: 50%;
-    transform: translate(-50%, -50%);
-    font-size: 7rem;
-    color: #ffcc00;
-    font-weight: 900;
-    text-align: center;
-    z-index: 10000;
-    animation: winnerFlash 2s infinite;
-  }
+body {
+  background-color: #000;
+  color: #fff;
+  font-family: 'Arial', sans-serif;
+  text-align: center;
+  margin: 0;
+  padding: 20px;
+}
+h1 {
+  font-size: 3rem;
+  color: #ffcc00;
+  margin-bottom: 20px;
+}
+.player-list {
+  display: flex;
+  justify-content: center;
+  gap: 30px;
+  flex-wrap: wrap;
+}
+.player {
+  border: 3px solid #ffcc00;
+  padding: 15px;
+  border-radius: 15px;
+  width: 200px;
+  background: #222;
+  position: relative;
+}
+.player-photo {
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 3px solid #ffcc00;
+  margin-bottom: 10px;
+}
+.player-name {
+  font-weight: bold;
+  font-size: 1.3rem;
+}
+.player-score {
+  font-size: 2rem;
+  margin-top: 5px;
+  color: #fff;
+}
+#freezeOverlay {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: black;
+  color: #ffcc00;
+  font-size: 5rem;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  user-select: none;
+  flex-direction: column;
+  font-weight: 900;
+}
+#freezeOverlay .dart { color: red; }
+#freezeOverlay .score { font-style: italic; }
 </style>
 </head>
 <body>
-
 <h1>Darts Scoreboard</h1>
-<div id="matchInfo"></div>
 
-<table id="scoreTable">
-  <thead>
-    <tr>
-      <th>Player</th>
-      <th>Score</th>
-      <th>Last Throw</th>
-      <th>Average</th>
-    </tr>
-  </thead>
-  <tbody id="scoreBody"></tbody>
-</table>
+<div id="playersContainer" class="player-list"></div>
 
-<div id="finalResults" class="hidden"></div>
-
-<div id="popup"></div>
-<div id="winnerAnimation" class="hidden"></div>
+<div id="freezeOverlay"><div><span class="dart">dart</span><span class="score">Score</span></div></div>
 
 <script>
-let dartsData = null;
-let popupTimeout = null;
-let tournamentFinalPlacements = null;
+let players = [];
+let gameMode = 501;
+let isTournament = false;
+let tournamentMatches = [];
+let currentMatchIndex = 0;
+let matchScores = {};
+let scores = {};
+let freezeActive = false;
 
-function loadGameData() {
-  const rawData = localStorage.getItem("darts_game");
-  if (!rawData) {
-    document.getElementById("matchInfo").textContent = "No active game found.";
-    return null;
+function renderPlayers() {
+  const container = document.getElementById("playersContainer");
+  container.innerHTML = "";
+  const playerData = isTournament && tournamentMatches.length > 0 ?
+    tournamentMatches[currentMatchIndex] :
+    players.map(p => p.name);
+
+  // Build display players list
+  let displayPlayers = [];
+  if (isTournament && tournamentMatches.length > 0) {
+    const match = tournamentMatches[currentMatchIndex];
+    displayPlayers = players.filter(p => match.includes(p.name));
+  } else {
+    displayPlayers = players;
   }
-  try {
-    return JSON.parse(rawData);
-  } catch {
-    document.getElementById("matchInfo").textContent = "Error loading game data.";
-    return null;
-  }
-}
 
-function renderScores() {
-  if (!dartsData) return;
-
-  const match = dartsData.players;
-  const scores = dartsData.scores;
-  const currentPlayerIndex = dartsData.currentPlayerIndex;
-
-  document.getElementById("matchInfo").textContent = `Match: ${match.join(" vs ")}`;
-
-  const tbody = document.getElementById("scoreBody");
-  tbody.innerHTML = "";
-
-  for (const player of match) {
-    const playerData = scores[player];
-    let lastThrow = playerData.history.length ? playerData.history[playerData.history.length - 1] : "-";
-    if (lastThrow === 0) lastThrow = "0";
-    const avg = playerData.average || 0;
-    const highlight = (match[currentPlayerIndex] === player) ? "style='background:#333300'" : "";
-
-    tbody.innerHTML += `
-      <tr ${highlight}>
-        <td class="playerName">${player}</td>
-        <td>${playerData.score}</td>
-        <td class="lastThrow">${lastThrow}</td>
-        <td>${avg}</td>
-      </tr>
+  for (const p of displayPlayers) {
+    let remaining = isTournament ? (matchScores[p.name] ?? gameMode) : (scores[p.name] ?? gameMode);
+    container.innerHTML += `
+      <div class="player">
+        <img src="${p.photo}" alt="${p.name}" class="player-photo" />
+        <div class="player-name">${p.name}</div>
+        <div class="player-score">${remaining}</div>
+      </div>
     `;
   }
 }
 
-// Popup display function
-function showPopup(message) {
-  const popup = document.getElementById("popup");
-  popup.textContent = message;
-  popup.style.opacity = "1";
-  popup.style.pointerEvents = "auto";
+function loadState() {
+  const stateStr = localStorage.getItem("dartGameState");
+  if (!stateStr) return;
+  const state = JSON.parse(stateStr);
+  players = state.players || [];
+  gameMode = state.gameMode || 501;
+  isTournament = state.isTournament || false;
+  tournamentMatches = state.tournamentMatches || [];
+  currentMatchIndex = state.currentMatchIndex || 0;
+  matchScores = state.matchScores || {};
+  scores = state.scores || {};
+  freezeActive = state.freezeActive || false;
 
-  if (popupTimeout) clearTimeout(popupTimeout);
-  popupTimeout = setTimeout(() => {
-    popup.style.opacity = "0";
-    popup.style.pointerEvents = "none";
-  }, 4000);
+  renderPlayers();
+  toggleFreezeOverlay(freezeActive);
 }
 
-// Check for popup messages in localStorage
-function checkPopup() {
-  const popupRaw = localStorage.getItem("darts_popup");
-  if (!popupRaw) return;
-
-  try {
-    const data = JSON.parse(popupRaw);
-    const now = Date.now();
-    if (now - data.timestamp < 4000) {
-      showPopup(data.message);
-    } else {
-      localStorage.removeItem("darts_popup");
-    }
-  } catch {
-    localStorage.removeItem("darts_popup");
-  }
-}
-
-// Load final results from localStorage
-function loadFinalResults() {
-  const finalRaw = localStorage.getItem("darts_final_results");
-  if (!finalRaw) return null;
-  try {
-    return JSON.parse(finalRaw);
-  } catch {
-    return null;
-  }
-}
-
-// Display final tournament results
-function showFinalResults(players) {
-  if (!players) return;
-  const container = document.getElementById("finalResults");
-  container.classList.remove("hidden");
-
-  container.innerHTML = `
-    <h2>🏆 Tournament Final Placements 🏆</h2>
-    <ol>
-      ${players.map((p) => `<li>${p}</li>`).join("")}
-    </ol>
-  `;
-
-  // Show winner animation for first player
-  showWinnerAnimation(players[0]);
-}
-
-// Winner animation overlay
-function showWinnerAnimation(winner) {
-  const anim = document.getElementById("winnerAnimation");
-  anim.textContent = `🎉 ${winner} Wins! 🎉`;
-  anim.classList.remove("hidden");
-}
-
-// Main update loop
-function update() {
-  dartsData = loadGameData();
-
-  if (dartsData) {
-    document.getElementById("finalResults").classList.add("hidden");
-    document.getElementById("winnerAnimation").classList.add("hidden");
-
-    renderScores();
-    checkPopup();
+function toggleFreezeOverlay(active) {
+  const overlay = document.getElementById("freezeOverlay");
+  if (active) {
+    overlay.style.display = "flex";
   } else {
-    tournamentFinalPlacements = loadFinalResults();
-
-    if (tournamentFinalPlacements) {
-      showFinalResults(tournamentFinalPlacements);
-    } else {
-      document.getElementById("matchInfo").textContent = "No active game or final results.";
-      document.getElementById("scoreBody").innerHTML = "";
-      document.getElementById("finalResults").classList.add("hidden");
-      document.getElementById("winnerAnimation").classList.add("hidden");
-    }
+    overlay.style.display = "none";
   }
 }
 
-// Refresh every second
-setInterval(update, 1000);
-update();
-</script>
+// Listen for storage changes to keep in sync
+window.addEventListener("storage", (e) => {
+  if (e.key === "dartGameState" || e.key === "freezeToggle") {
+    loadState();
+  }
+});
 
+// Initial load and periodic refresh every 2s for safety
+loadState();
+setInterval(loadState, 2000);
+</script>
 </body>
 </html>
