@@ -6,119 +6,196 @@
 <title>Darts Scoreboard</title>
 <style>
 body {
-  background: #000;
-  color: #fff;
-  font-family: 'Arial', sans-serif;
-  margin: 0; padding: 20px;
-  text-align: center;
+background: radial-gradient(circle at center, #0a0a0a 0%, #121212 90%);
+color: #ffcc00;
+font-family: 'Arial Black', Arial, sans-serif;
+margin: 0;
+padding: 30px;
+user-select: none;
 }
 h1 {
-  color: #ffcc00;
+text-align: center;
+font-size: 3rem;
+margin-bottom: 10px;
+text-shadow: 0 0 8px #ffcc00;
 }
-.player {
-  margin: 20px auto;
-  width: 250px;
-  padding: 10px;
-  border: 2px solid #ffcc00;
-  border-radius: 10px;
-  display: flex;
-  align-items: center;
-  justify-content: left;
-  gap: 15px;
+#matchInfo {
+text-align: center;
+font-size: 1.5rem;
+margin-bottom: 20px;
+letter-spacing: 1px;
 }
-.player img {
-  width: 50px;
-  height: 50px;
-  border-radius: 50%;
-  object-fit: cover;
+#scoreTable {
+margin: 0 auto;
+width: 400px;
+border-collapse: collapse;
 }
-.score {
-  font-size: 2rem;
-  margin-left: auto;
+#scoreTable th, #scoreTable td {
+border: 2px solid #ffcc00;
+padding: 15px 10px;
+font-size: 1.4rem;
+text-align: center;
 }
-#freezeOverlay {
-  position: fixed;
-  top: 0; left: 0; right: 0; bottom: 0;
-  background: rgba(0,0,0,0.95);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.5s ease;
-  z-index: 100000;
+#scoreTable th {
+background: #333300;
 }
-#freezeOverlay.visible {
-  opacity: 1;
-  pointer-events: all;
+#scoreTable td.playerName {
+font-weight: bold;
+text-align: left;
+padding-left: 20px;
 }
-#freezeOverlay img {
-  max-width: 70vw;
-  max-height: 70vh;
-  object-fit: contain;
-  filter: drop-shadow(0 0 10px #ffcc00);
+#popup {
+position: fixed;
+top: 15%;
+left: 50%;
+transform: translate(-50%, -50%);
+background: #222200;
+border: 3px solid #ffcc00;
+color: #fff;
+font-size: 2rem;
+padding: 20px 40px;
+border-radius: 10px;
+box-shadow: 0 0 15px #ffcc00;
+opacity: 0;
+pointer-events: none;
+transition: opacity 0.3s ease;
+z-index: 1000;
+}
+#finalResults {
+max-width: 500px;
+margin: 40px auto 0;
+background: #222200cc;
+border: 2px solid #ffcc00;
+border-radius: 12px;
+padding: 20px;
+}
+#finalResults h2 {
+text-align: center;
+margin-bottom: 15px;
+}
+#finalResults ol {
+font-size: 1.3rem;
+padding-left: 20px;
 }
 </style>
 </head>
 <body>
 
 <h1>Darts Scoreboard</h1>
+<div id="matchInfo">Waiting for game to start...</div>
 
-<div id="playersContainer"></div>
+<table id="scoreTable" hidden>
+<thead>
+<tr><th>Player</th><th>Score</th><th>Average</th></tr>
+</thead>
+<tbody id="scoreBody"></tbody>
+</table>
 
-<div id="freezeOverlay" class="hidden">
-  <img src="assets/Logo.png" alt="Freeze Screen" />
+<div id="finalResults" hidden>
+<h2>Tournament Results</h2>
+<ol id="finalList"></ol>
 </div>
 
+<div id="popup"></div>
+
 <script>
-let players = [];
-let playerPics = {};
-let scores = {};
-let freeze = false;
+const matchInfo = document.getElementById("matchInfo");
+const scoreTable = document.getElementById("scoreTable");
+const scoreBody = document.getElementById("scoreBody");
+const popup = document.getElementById("popup");
+const finalResults = document.getElementById("finalResults");
+const finalList = document.getElementById("finalList");
 
-function loadData() {
-  players = JSON.parse(localStorage.getItem("dartsPlayers") || "[]");
-  playerPics = JSON.parse(localStorage.getItem("dartsPlayerPics") || "{}");
-  scores = JSON.parse(localStorage.getItem("dartsScores") || "{}");
-  freeze = localStorage.getItem("dartsFreezeScreen") === "true";
-  updateFreezeScreen();
+let lastPopupTimestamp = 0;
+
+function renderScores(data) {
+const { players, scores, currentPlayerIndex } = data;
+
+if (!players || players.length === 0) {
+matchInfo.textContent = "Waiting for game to start...";
+scoreTable.hidden = true;
+return;
 }
 
-function renderScores() {
-  const container = document.getElementById("playersContainer");
-  container.innerHTML = players.map(p => {
-    const pic = playerPics[p] || "assets/default_player.png";
-    const score = scores[p] ?? 0;
-    return `
-    <div class="player">
-      <img src="${pic}" alt="${p}" />
-      <div>${p}</div>
-      <div class="score">${score}</div>
-    </div>
-    `;
-  }).join("");
+matchInfo.textContent = `Match: ${players[0]} vs ${players[1]} — Current Turn: ${players[currentPlayerIndex]}`;
+
+scoreBody.innerHTML = players.map((p) => {
+const s = scores[p];
+const avg = s.average || 0;
+return `<tr>
+<td class="playerName">${p}</td>
+<td>${s.score}</td>
+<td>${avg}</td>
+</tr>`;
+}).join("");
+scoreTable.hidden = false;
+finalResults.hidden = true;
 }
 
-function updateFreezeScreen() {
-  const overlay = document.getElementById("freezeOverlay");
-  if (freeze) {
-    overlay.classList.add("visible");
-  } else {
-    overlay.classList.remove("visible");
-  }
+function showPopupMessage(message) {
+popup.textContent = message;
+popup.style.opacity = "1";
+popup.style.pointerEvents = "auto";
+
+setTimeout(() => {
+popup.style.opacity = "0";
+popup.style.pointerEvents = "none";
+}, 2000);
 }
 
-function refreshData() {
-  loadData();
-  renderScores();
+// Listen for popup messages from localStorage
+function checkForPopup() {
+const popupData = localStorage.getItem("darts_popup");
+if (!popupData) return;
+try {
+const { message, timestamp } = JSON.parse(popupData);
+if (timestamp > lastPopupTimestamp) {
+lastPopupTimestamp = timestamp;
+showPopupMessage(message);
+}
+} catch (e) {
+// ignore parse errors
+}
 }
 
-window.addEventListener("load", () => {
-  refreshData();
+// Listen for game updates from localStorage
+function updateFromStorage() {
+const gameDataRaw = localStorage.getItem("darts_game");
+if (gameDataRaw) {
+const data = JSON.parse(gameDataRaw);
+renderScores(data);
+finalResults.hidden = true;
+} else {
+// Check if final results are saved
+const finalRaw = localStorage.getItem("darts_final_results");
+if (finalRaw) {
+renderFinalResults(JSON.parse(finalRaw));
+} else {
+matchInfo.textContent = "Waiting for game to start...";
+scoreTable.hidden = true;
+finalResults.hidden = true;
+}
+}
+}
 
-  // Refresh every 5 seconds
-  setInterval(refreshData, 5000);
-});
+// Render tournament final results
+function renderFinalResults(placements) {
+matchInfo.textContent = "Tournament Complete!";
+scoreTable.hidden = true;
+finalResults.hidden = false;
+finalList.innerHTML = placements
+.map((p, i) => `<li><strong>Place ${i + 1}:</strong> ${p}</li>`)
+.join("");
+}
+
+// Periodically check localStorage for updates
+setInterval(() => {
+checkForPopup();
+updateFromStorage();
+}, 500);
+
+// Initial update on load
+updateFromStorage();
 </script>
 
 </body>
