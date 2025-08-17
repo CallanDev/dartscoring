@@ -1,59 +1,277 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>Join Game</title>
-  <style>
-    body { background: #111; color: #fff; font-family: sans-serif; padding: 20px; text-align: center; }
-    video { width: 300px; border: 2px solid #444; margin-top: 10px; }
-    #joinedMessage { color: limegreen; margin-top: 20px; }
-  </style>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Darts Stats</title>
+<style>
+  body {
+    font-family: 'Arial', sans-serif;
+    background-color: #000;
+    color: #eee;
+    margin: 0; padding: 20px;
+    text-align: center;
+  }
+  #logo {
+    position: fixed;
+    top: 20px; left: 50%;
+    transform: translateX(-50%);
+    width: 250px;
+    opacity: 0;
+    transition: opacity 1.5s ease;
+  }
+  #logo.show {
+    opacity: 1;
+  }
+  #joinSection, #statsSection {
+    max-width: 480px;
+    margin: auto;
+  }
+  input, button {
+    padding: 8px;
+    font-size: 1rem;
+    margin: 10px 0;
+  }
+  video {
+    max-width: 100%;
+    border-radius: 10px;
+  }
+  #joinedList {
+    list-style: none;
+    padding: 0;
+  }
+  #joinedList li {
+    margin: 8px 0;
+  }
+  #joinedList img {
+    height: 48px;
+    width: 48px;
+    object-fit: cover;
+    border-radius: 50%;
+    margin-right: 10px;
+    vertical-align: middle;
+  }
+  #statsTable {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 15px;
+  }
+  #statsTable th, #statsTable td {
+    border: 1px solid #555;
+    padding: 8px;
+  }
+</style>
 </head>
 <body>
 
-<h1>Join Game</h1>
-<div id="joinArea">
-  <input id="nameInput" placeholder="Enter Name" /><br>
-  <video id="cam" autoplay muted></video><br>
-  <button id="capture">Join</button>
+<img id="logo" src="assets/Logo.png" alt="Logo" />
+
+<div id="joinSection">
+  <h2>Join Game</h2>
+  <input type="text" id="nameInput" placeholder="Enter your name" />
+  <br />
+  <button id="openCameraBtn" disabled>Take Picture</button>
+
+  <div id="cameraContainer" style="display:none;">
+    <video id="video" autoplay playsinline></video>
+    <br />
+    <button id="snapBtn">Snap Picture</button>
+    <button id="cancelCameraBtn">Cancel</button>
+  </div>
+
+  <canvas id="canvas" style="display:none;"></canvas>
+
+  <h3>Players Joined</h3>
+  <ul id="joinedList"></ul>
 </div>
-<div id="joinedMessage" hidden>✅ Joined! Wait for the game to begin...</div>
+
+<div id="statsSection" style="display:none;">
+  <h2>Game Stats</h2>
+  <table id="statsTable">
+    <thead>
+      <tr>
+        <th>Player</th>
+        <th>Shots Played</th>
+        <th>Average</th>
+        <th>Total Score</th>
+      </tr>
+    </thead>
+    <tbody id="statsBody"></tbody>
+  </table>
+</div>
 
 <script>
-  const joinKey = 'joining_open';
-  const video = document.getElementById('cam');
-  const nameInput = document.getElementById('nameInput');
-  const joinBtn = document.getElementById('capture');
-  const joinedMsg = document.getElementById('joinedMessage');
-  const joinArea = document.getElementById('joinArea');
+  let joiningOpen = false;
+  let joinedPlayers = [];
+  let localPlayerName = "";
+  let localPlayerImage = "";
 
-  navigator.mediaDevices.getUserMedia({ video: true }).then(stream => {
-    video.srcObject = stream;
+  const nameInput = document.getElementById("nameInput");
+  const openCameraBtn = document.getElementById("openCameraBtn");
+  const video = document.getElementById("video");
+  const snapBtn = document.getElementById("snapBtn");
+  const cancelCameraBtn = document.getElementById("cancelCameraBtn");
+  const cameraContainer = document.getElementById("cameraContainer");
+  const canvas = document.getElementById("canvas");
+  const joinedList = document.getElementById("joinedList");
+
+  let stream = null;
+
+  // Logo fade in/out logic
+  const logo = document.getElementById("logo");
+  function updateLogo() {
+    const logoOn = localStorage.getItem("darts_logo_on") === "true";
+    if (logoOn) {
+      logo.classList.add("show");
+    } else {
+      logo.classList.remove("show");
+    }
+  }
+  updateLogo();
+
+  // Check joining status and update UI
+  function checkJoiningStatus() {
+    joiningOpen = localStorage.getItem("darts_joining_open") === "true";
+    if (joiningOpen) {
+      document.getElementById("joinSection").style.display = "block";
+      document.getElementById("statsSection").style.display = "none";
+    } else {
+      document.getElementById("joinSection").style.display = "none";
+      document.getElementById("statsSection").style.display = "block";
+      updateStatsTable();
+    }
+  }
+
+  // Enable Take Picture button only if name entered
+  nameInput.addEventListener("input", () => {
+    openCameraBtn.disabled = !nameInput.value.trim();
   });
 
-  joinBtn.onclick = () => {
-    const name = nameInput.value.trim();
-    if (!name) return alert("Enter your name.");
-    const canvas = document.createElement('canvas');
+  // Start camera on Take Picture click
+  openCameraBtn.addEventListener("click", async () => {
+    if (!nameInput.value.trim()) return;
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({ video: true });
+      video.srcObject = stream;
+      cameraContainer.style.display = "block";
+      openCameraBtn.disabled = true;
+    } catch (err) {
+      alert("Camera access denied or not available.");
+      console.error(err);
+    }
+  });
+
+  // Snap picture
+  snapBtn.addEventListener("click", () => {
+    const ctx = canvas.getContext("2d");
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
-    const ctx = canvas.getContext('2d');
     ctx.drawImage(video, 0, 0);
-    const image = canvas.toDataURL();
-    const players = JSON.parse(localStorage.getItem("joined_players") || "[]");
-    if (players.find(p => p.name === name)) return alert("Name already taken!");
-    players.push({ name, image });
-    localStorage.setItem("joined_players", JSON.stringify(players));
-    joinArea.hidden = true;
-    joinedMsg.hidden = false;
-  };
+    const imgData = canvas.toDataURL("image/png");
+    localPlayerName = nameInput.value.trim();
+    localPlayerImage = imgData;
 
+    // Save joined player to localStorage
+    joinedPlayers.push({ name: localPlayerName, image: localPlayerImage });
+    localStorage.setItem("darts_joined_players", JSON.stringify(joinedPlayers));
+
+    // Cleanup camera
+    stopCamera();
+    cameraContainer.style.display = "none";
+    nameInput.value = "";
+    openCameraBtn.disabled = true;
+    renderJoinedList();
+  });
+
+  // Cancel camera
+  cancelCameraBtn.addEventListener("click", () => {
+    stopCamera();
+    cameraContainer.style.display = "none";
+    openCameraBtn.disabled = false;
+  });
+
+  // Stop camera stream
+  function stopCamera() {
+    if (stream) {
+      stream.getTracks().forEach(t => t.stop());
+      stream = null;
+    }
+  }
+
+  // Render joined players list
+  function renderJoinedList() {
+    if (joinedPlayers.length === 0) {
+      joinedList.innerHTML = "<li>No players joined yet.</li>";
+      return;
+    }
+    joinedList.innerHTML = joinedPlayers.map(p => `
+      <li><img src="${p.image}" alt="Avatar" /> ${p.name}</li>
+    `).join("");
+  }
+
+  // Update stats table from scores saved in localStorage
+  function updateStatsTable() {
+    const statsBody = document.getElementById("statsBody");
+    const scoreDataRaw = localStorage.getItem("darts_scores");
+    const playersRaw = localStorage.getItem("darts_players");
+
+    if (!scoreDataRaw || !playersRaw) {
+      statsBody.innerHTML = "<tr><td colspan='4'>No game data available.</td></tr>";
+      return;
+    }
+
+    const scores = JSON.parse(scoreDataRaw);
+    const players = JSON.parse(playersRaw);
+
+    if (!players || players.length === 0) {
+      statsBody.innerHTML = "<tr><td colspan='4'>No players found.</td></tr>";
+      return;
+    }
+
+    statsBody.innerHTML = players.map(p => {
+      const s = scores[p.name] || { shots: 0, average: 0, score: 0, totalPoints: 0 };
+      return `
+        <tr>
+          <td>${p.name}</td>
+          <td>${s.shots || 0}</td>
+          <td>${s.average || 0}</td>
+          <td>${typeof s.score === 'number' ? s.score : s.totalPoints || 0}</td>
+        </tr>
+      `;
+    }).join("");
+  }
+
+  // Listen for changes in joined players or game state
   setInterval(() => {
-    const isOpen = localStorage.getItem(joinKey) === "true";
-    joinArea.hidden = !isOpen;
-    joinedMsg.hidden = isOpen;
-  }, 500);
+    const joinOpen = localStorage.getItem("darts_joining_open") === "true";
+    if (joinOpen !== joiningOpen) {
+      joiningOpen = joinOpen;
+      checkJoiningStatus();
+      if (!joiningOpen) {
+        joinedPlayers = [];
+        renderJoinedList();
+      }
+    }
+    // Update joined players list from localStorage
+    if (joiningOpen) {
+      const jpRaw = localStorage.getItem("darts_joined_players");
+      if (jpRaw) {
+        const jp = JSON.parse(jpRaw);
+        if (JSON.stringify(jp) !== JSON.stringify(joinedPlayers)) {
+          joinedPlayers = jp;
+          renderJoinedList();
+        }
+      }
+    }
+  }, 700);
+
+  // On load
+  window.onload = () => {
+    checkJoiningStatus();
+    renderJoinedList();
+    updateLogo();
+  }
 </script>
+
 </body>
 </html>
-
