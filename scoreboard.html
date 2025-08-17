@@ -1,203 +1,248 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Darts Scoreboard</title>
-<style>
-  body {
-    background: radial-gradient(circle at center, #0a0a0a 0%, #121212 90%);
-    color: #ffcc00;
-    font-family: 'Arial Black', Arial, sans-serif;
-    margin: 0;
-    padding: 30px;
-    user-select: none;
-  }
-  h1 {
-    text-align: center;
-    font-size: 3rem;
-    margin-bottom: 10px;
-    text-shadow: 0 0 8px #ffcc00;
-  }
-  #matchInfo {
-    text-align: center;
-    font-size: 1.5rem;
-    margin-bottom: 20px;
-    letter-spacing: 1px;
-  }
-  #scoreTable {
-    margin: 0 auto;
-    width: 400px;
-    border-collapse: collapse;
-  }
-  #scoreTable th, #scoreTable td {
-    border: 2px solid #ffcc00;
-    padding: 15px 10px;
-    font-size: 1.4rem;
-    text-align: center;
-  }
-  #scoreTable th {
-    background: #333300;
-  }
-  #scoreTable td.playerName {
-    font-weight: bold;
-    text-align: left;
-    padding-left: 20px;
-  }
-  #popup {
-    position: fixed;
-    top: 15%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    background: #222200;
-    border: 3px solid #ffcc00;
-    color: #fff;
-    font-size: 2rem;
-    padding: 20px 40px;
-    border-radius: 10px;
-    box-shadow: 0 0 15px #ffcc00;
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity 0.3s ease;
-    z-index: 1000;
-  }
-  #finalResults {
-    max-width: 500px;
-    margin: 40px auto 0;
-    background: #222200cc;
-    border: 2px solid #ffcc00;
-    border-radius: 12px;
-    padding: 20px;
-  }
-  #finalResults h2 {
-    text-align: center;
-    margin-bottom: 15px;
-  }
-  #finalResults ol {
-    font-size: 1.3rem;
-    padding-left: 20px;
-  }
-</style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Darts Scoreboard</title>
+  <style>
+    body {
+      background: #111;
+      color: #ffcc00;
+      font-family: Arial, sans-serif;
+      padding: 20px;
+      margin: 0;
+      text-align: center;
+    }
+    h1, h2 {
+      color: #ffcc00;
+    }
+    #dartboard {
+      width: 300px;
+      height: 300px;
+      margin: 20px auto;
+      border-radius: 50%;
+      position: relative;
+      background: radial-gradient(circle at center, #222 50%, #111 100%);
+      box-shadow: 0 0 20px #ffcc00;
+    }
+    #dartboard svg {
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      user-select: none;
+    }
+    .dart {
+      position: absolute;
+      width: 20px;
+      height: 20px;
+      background: #ffcc00;
+      border-radius: 50%;
+      border: 2px solid #000;
+      box-shadow: 0 0 8px #ffcc00;
+      transform: translate(-50%, -50%);
+      animation: dart-fall 0.5s ease forwards;
+      pointer-events: none;
+    }
+    @keyframes dart-fall {
+      from {
+        transform: translate(-50%, -150%) scale(0);
+        opacity: 0;
+      }
+      to {
+        transform: translate(-50%, -50%) scale(1);
+        opacity: 1;
+      }
+    }
+    #scoreboard {
+      margin-top: 20px;
+      background: #222;
+      padding: 10px;
+      border-radius: 10px;
+      max-width: 400px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      color: #ffcc00;
+    }
+    th, td {
+      border: 1px solid #ffcc00;
+      padding: 6px 10px;
+    }
+    #popup {
+      position: fixed;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(255, 204, 0, 0.9);
+      color: #111;
+      font-weight: bold;
+      padding: 15px 30px;
+      border-radius: 12px;
+      font-size: 1.4rem;
+      box-shadow: 0 0 10px #ffcc00;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s ease;
+      z-index: 1000;
+    }
+    #matchStatus {
+      margin-top: 10px;
+      font-size: 1.2rem;
+      font-weight: bold;
+      color: #ffcc00;
+      text-shadow: 0 0 6px #ffcc00;
+    }
+  </style>
 </head>
 <body>
 
   <h1>Darts Scoreboard</h1>
-  <div id="matchInfo">Waiting for game to start...</div>
+  <div id="dartboard">
+    <svg viewBox="0 0 200 200" aria-label="Dartboard" role="img" >
+      <circle cx="100" cy="100" r="100" fill="#222"/>
+      <circle cx="100" cy="100" r="90" stroke="#fff" stroke-width="1" fill="none"/>
+      <circle cx="100" cy="100" r="60" stroke="#0f0" stroke-width="1" fill="none"/>
+      <circle cx="100" cy="100" r="40" stroke="#f00" stroke-width="1" fill="none"/>
+      <circle cx="100" cy="100" r="10" fill="#ff0000"/>
+      <circle cx="100" cy="100" r="5" fill="#00ff00"/>
+    </svg>
+  </div>
 
-  <table id="scoreTable" hidden>
-    <thead>
-      <tr><th>Player</th><th>Score</th><th>Average</th></tr>
-    </thead>
-    <tbody id="scoreBody"></tbody>
-  </table>
+  <div id="matchStatus">Waiting for game...</div>
 
-  <div id="finalResults" hidden>
-    <h2>Tournament Results</h2>
-    <ol id="finalList"></ol>
+  <div id="scoreboard">
+    <table>
+      <thead>
+        <tr><th>Player</th><th>Score</th><th>Last Score</th></tr>
+      </thead>
+      <tbody id="scoreTableBody"></tbody>
+    </table>
   </div>
 
   <div id="popup"></div>
 
   <script>
-    const matchInfo = document.getElementById("matchInfo");
-    const scoreTable = document.getElementById("scoreTable");
-    const scoreBody = document.getElementById("scoreBody");
-    const popup = document.getElementById("popup");
-    const finalResults = document.getElementById("finalResults");
-    const finalList = document.getElementById("finalList");
+    const dartboard = document.getElementById('dartboard');
+    const scoreTableBody = document.getElementById('scoreTableBody');
+    const popup = document.getElementById('popup');
+    const matchStatus = document.getElementById('matchStatus');
 
     let lastPopupTimestamp = 0;
 
-    function renderScores(data) {
-      const { players, scores, currentPlayerIndex } = data;
-
-      if (!players || players.length === 0) {
-        matchInfo.textContent = "Waiting for game to start...";
-        scoreTable.hidden = true;
-        return;
-      }
-
-      matchInfo.textContent = `Match: ${players[0]} vs ${players[1]} — Current Turn: ${players[currentPlayerIndex]}`;
-
-      scoreBody.innerHTML = players.map((p) => {
-        const s = scores[p];
-        const avg = s.average || 0;
-        return `<tr>
-          <td class="playerName">${p}</td>
-          <td>${s.score}</td>
-          <td>${avg}</td>
-        </tr>`;
-      }).join("");
-      scoreTable.hidden = false;
-      finalResults.hidden = true;
-    }
-
-    function showPopupMessage(message) {
+    function showPopup(message) {
       popup.textContent = message;
-      popup.style.opacity = "1";
-      popup.style.pointerEvents = "auto";
-
+      popup.style.opacity = '1';
+      lastPopupTimestamp = Date.now();
       setTimeout(() => {
-        popup.style.opacity = "0";
-        popup.style.pointerEvents = "none";
+        if (Date.now() - lastPopupTimestamp >= 2000) {
+          popup.style.opacity = '0';
+        }
       }, 2000);
     }
 
-    // Listen for popup messages from localStorage
-    function checkForPopup() {
-      const popupData = localStorage.getItem("darts_popup");
-      if (!popupData) return;
-      try {
-        const { message, timestamp } = JSON.parse(popupData);
-        if (timestamp > lastPopupTimestamp) {
-          lastPopupTimestamp = timestamp;
-          showPopupMessage(message);
-        }
-      } catch (e) {
-        // ignore parse errors
-      }
-    }
-
-    // Listen for game updates from localStorage
-    function updateFromStorage() {
-      const gameDataRaw = localStorage.getItem("darts_game");
-      if (gameDataRaw) {
-        const data = JSON.parse(gameDataRaw);
-        renderScores(data);
-        finalResults.hidden = true;
+    function placeDart(score, throwIndex) {
+      // Map score to approximate dartboard coordinates:
+      // Center (100,100)
+      // Just simulate random small variations around circles for simplicity
+      let cx = 100;
+      let cy = 100;
+      if (score === 50) {
+        // bullseye center
+        cx = 100;
+        cy = 100;
+      } else if (score === 25) {
+        // outer bull
+        cx = 100 + (Math.random() * 30 - 15);
+        cy = 100 + (Math.random() * 30 - 15);
+      } else if (score >= 20) {
+        // inner rings
+        cx = 100 + (Math.random() * 40 - 20);
+        cy = 100 + (Math.random() * 40 - 20);
+      } else if (score >= 10) {
+        cx = 100 + (Math.random() * 60 - 30);
+        cy = 100 + (Math.random() * 60 - 30);
       } else {
-        // Check if final results are saved
-        const finalRaw = localStorage.getItem("darts_final_results");
-        if (finalRaw) {
-          renderFinalResults(JSON.parse(finalRaw));
-        } else {
-          matchInfo.textContent = "Waiting for game to start...";
-          scoreTable.hidden = true;
-          finalResults.hidden = true;
-        }
+        cx = 100 + (Math.random() * 80 - 40);
+        cy = 100 + (Math.random() * 80 - 40);
+      }
+
+      const dart = document.createElement('div');
+      dart.className = 'dart';
+      dart.style.left = `${cx}px`;
+      dart.style.top = `${cy}px`;
+      dart.style.animationDelay = `${throwIndex * 0.6}s`;
+      dartboard.appendChild(dart);
+
+      setTimeout(() => {
+        dart.remove();
+      }, 4000);
+    }
+
+    function updateScores(data) {
+      if (!data || !data.scores) return;
+
+      const scores = data.scores;
+      const players = Object.keys(scores);
+
+      scoreTableBody.innerHTML = '';
+      players.forEach(player => {
+        const row = document.createElement('tr');
+        const pCell = document.createElement('td');
+        const sCell = document.createElement('td');
+        const lCell = document.createElement('td');
+        pCell.textContent = player;
+        sCell.textContent = scores[player].score;
+        lCell.textContent = scores[player].last || 0;
+        row.appendChild(pCell);
+        row.appendChild(sCell);
+        row.appendChild(lCell);
+        scoreTableBody.appendChild(row);
+      });
+
+      if (data.throws && data.throws.length > 0) {
+        data.throws.forEach((score, idx) => placeDart(score, idx));
+        showPopup(`${data.match[data.currentPlayer]} scored ${data.throws.reduce((a,b) => a + b, 0)}`);
+      }
+
+      if (data.winners && data.winners.length > 0) {
+        showPopup(`Winner: ${data.winners[data.winners.length-1]}`);
+      }
+
+      if (data.match) {
+        matchStatus.textContent = `Match: ${data.match[0]} vs ${data.match[1]} - Turn: ${data.match[data.currentPlayer]}`;
       }
     }
 
-    // Render tournament final results
-    function renderFinalResults(placements) {
-      matchInfo.textContent = "Tournament Complete!";
-      scoreTable.hidden = true;
-      finalResults.hidden = false;
-      finalList.innerHTML = placements
-        .map((p, i) => `<li><strong>Place ${i + 1}:</strong> ${p}</li>`)
-        .join("");
+    function poll() {
+      const stored = localStorage.getItem('darts_game');
+      if (stored) {
+        try {
+          const data = JSON.parse(stored);
+          updateScores(data);
+        } catch(e) {}
+      }
+
+      // Check popup sync
+      const popupDataRaw = localStorage.getItem('darts_popup');
+      if (popupDataRaw) {
+        try {
+          const popupData = JSON.parse(popupDataRaw);
+          if (popupData.timestamp > lastPopupTimestamp) {
+            showPopup(popupData.message);
+            lastPopupTimestamp = popupData.timestamp;
+          }
+        } catch(e) {}
+      }
+
+      setTimeout(poll, 1000);
     }
 
-    // Periodically check localStorage for updates
-    setInterval(() => {
-      checkForPopup();
-      updateFromStorage();
-    }, 500);
-
-    // Initial update on load
-    updateFromStorage();
+    poll();
   </script>
-
 </body>
 </html>
 
