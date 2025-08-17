@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Darts Stats</title>
+<style>
+body {
+  background-color: #111;
+  color: #eee;
+  font-family: 'Arial', sans-serif;
+  margin: 0;
+  padding: 20px;
+}
+h1 {
+  color: #ffcc00;
+  margin-bottom: 20px;
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #222;
+}
+th, td {
+  padding: 10px;
+  border: 1px solid #444;
+  text-align: left;
+}
+th {
+  background-color: #333;
+  color: #ffcc00;
+}
+.player-photo {
+  height: 40px;
+  width: 40px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid #ffcc00;
+}
+</style>
+</head>
+<body>
+<h1>Darts Player Stats</h1>
+<table>
+  <thead>
+    <tr>
+      <th>Player</th>
+      <th>Photo</th>
+      <th>Games Played</th>
+      <th>Wins</th>
+      <th>Losses</th>
+      <th>Win %</th>
+    </tr>
+  </thead>
+  <tbody id="statsBody"></tbody>
+</table>
+
+<script>
+let players = [];
+let matchWinners = [];
+let matchLosers = [];
+
+function loadState() {
+  const stateStr = localStorage.getItem("dartGameState");
+  if (!stateStr) return;
+  const state = JSON.parse(stateStr);
+  players = state.players || [];
+  matchWinners = state.matchWinners || [];
+  matchLosers = state.matchLosers || [];
+
+  renderStats();
+}
+
+function renderStats() {
+  const tbody = document.getElementById("statsBody");
+  tbody.innerHTML = "";
+
+  // Build stats by player name
+  const stats = {};
+  for (const p of players) {
+    stats[p.name] = { played: 0, wins: 0, losses: 0 };
+  }
+
+  for (const w of matchWinners) {
+    if (stats[w]) {
+      stats[w].wins++;
+      stats[w].played++;
+    }
+  }
+  for (const l of matchLosers) {
+    if (stats[l]) {
+      stats[l].losses++;
+      stats[l].played++;
+    }
+  }
+
+  for (const p of players) {
+    const s = stats[p.name];
+    const winPercent = s.played > 0 ? ((s.wins / s.played) * 100).toFixed(1) : "0.0";
+    tbody.innerHTML += `
+      <tr>
+        <td>${p.name}</td>
+        <td><img src="${p.photo}" alt="${p.name}" class="player-photo"></td>
+        <td>${s.played}</td>
+        <td>${s.wins}</td>
+        <td>${s.losses}</td>
+        <td>${winPercent}%</td>
+      </tr>
+    `;
+  }
+}
+
+window.addEventListener("storage", () => {
+  loadState();
+});
+
+loadState();
+</script>
+</body>
+</html>
