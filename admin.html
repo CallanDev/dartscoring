@@ -1,276 +1,537 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Darts Admin</title>
-  <style>
-    body {
-      background: #111;
-      color: #ffcc00;
-      font-family: Arial, sans-serif;
-      padding: 20px;
-      margin: 0;
-    }
-    h1, h2 {
-      color: #ffcc00;
-    }
-    input, button, select {
-      padding: 6px;
-      font-size: 1rem;
-      margin: 5px 0;
-    }
-    .section {
-      margin-top: 20px;
-    }
-    #dartboard {
-      width: 300px;
-      height: 300px;
-      margin: 20px auto;
-      display: block;
-      border-radius: 50%;
-      cursor: crosshair;
-    }
-    .log {
-      background: #222;
-      padding: 10px;
-      margin-top: 20px;
-      height: 120px;
-      overflow-y: auto;
-    }
-    #breakScreen {
-      display: none;
-      position: fixed;
-      top: 0; left: 0;
-      width: 100vw;
-      height: 100vh;
-      background: rgba(0, 0, 0, 0.95);
-      color: #fff;
-      font-size: 2.5rem;
-      text-align: center;
-      justify-content: center;
-      align-items: center;
-      z-index: 999;
-      flex-direction: column;
-    }
-  </style>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Darts Admin</title>
+<style>
+  body {
+    background: #111;
+    color: #ffcc00;
+    font-family: Arial, sans-serif;
+    padding: 20px;
+    margin: 0;
+  }
+  h1, h2 {
+    color: #ffcc00;
+  }
+  input, button, select {
+    padding: 6px;
+    font-size: 1rem;
+    margin: 5px 0;
+  }
+  #playerList {
+    list-style:none;
+    padding-left: 0;
+    max-height: 120px;
+    overflow-y: auto;
+    background: #222;
+    border-radius: 8px;
+  }
+  #playerList li {
+    padding: 4px 8px;
+    border-bottom: 1px solid #444;
+  }
+  #dartboard {
+    width: 400px;
+    height: 400px;
+    margin: 20px auto;
+    cursor: crosshair;
+    display: block;
+  }
+  #gameArea {
+    text-align: center;
+  }
+  #breakScreen {
+    display: none;
+    position: fixed;
+    top: 0; left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0,0,0,0.95);
+    color: #ffcc00;
+    font-size: 3rem;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
+    z-index: 999;
+  }
+  #log {
+    max-height: 100px;
+    overflow-y: auto;
+    background: #222;
+    padding: 10px;
+    margin-top: 10px;
+    font-size: 0.9rem;
+    border-radius: 8px;
+  }
+</style>
 </head>
 <body>
 
-  <h1>Darts Admin Panel</h1>
+<h1>Darts Admin Panel</h1>
 
-  <div id="setup">
-    <h2>Setup</h2>
-    <label>Game Mode:
-      <select id="gameMode">
-        <option value="301">301</option>
-        <option value="501" selected>501</option>
-        <option value="701">701</option>
-      </select>
-    </label>
-    <br>
-    <label>Tournament Mode:
-      <input type="checkbox" id="tournamentMode" />
-    </label>
-    <br>
-    <label>Full Tournament (round-robin):
-      <input type="checkbox" id="fullTournament" />
-    </label>
-    <br>
-    <input type="text" id="playerName" placeholder="Enter player name" />
-    <button onclick="addPlayer()">Add Player</button>
-    <ul id="playerList"></ul>
-    <button onclick="startTournament()">Start Tournament</button>
-  </div>
+<div id="setup">
+  <h2>Setup</h2>
+  <label>Game Mode:
+    <select id="gameMode">
+      <option value="301">301</option>
+      <option value="501" selected>501</option>
+      <option value="701">701</option>
+    </select>
+  </label>
+  <br />
+  <label>Tournament Mode:
+    <input type="checkbox" id="tournamentMode" />
+  </label>
+  <br />
+  <label>Full Tournament (round-robin):
+    <input type="checkbox" id="fullTournament" />
+  </label>
+  <br />
+  <input type="text" id="playerName" placeholder="Enter player name" />
+  <button onclick="addPlayer()">Add Player</button>
+  <ul id="playerList"></ul>
+  <button onclick="startTournament()">Start Tournament</button>
+</div>
 
-  <div id="gameArea" style="display:none;">
-    <h2 id="matchTitle">Match</h2>
-    <svg id="dartboard" viewBox="0 0 200 200" onclick="throwDart(event)">
-      <circle cx="100" cy="100" r="100" fill="#222"/>
-      <circle cx="100" cy="100" r="90" stroke="#fff" stroke-width="1" fill="none"/>
-      <circle cx="100" cy="100" r="60" stroke="#0f0" stroke-width="1" fill="none"/>
-      <circle cx="100" cy="100" r="40" stroke="#f00" stroke-width="1" fill="none"/>
-      <circle cx="100" cy="100" r="10" fill="#ff0000"/>
-      <circle cx="100" cy="100" r="5" fill="#00ff00"/>
-    </svg>
-    <p>Click dartboard to throw (3 throws per turn)</p>
-    <p id="turnDisplay"></p>
-  </div>
+<div id="gameArea" style="display:none;">
+  <h2 id="matchTitle">Match</h2>
+  <svg id="dartboard" viewBox="0 0 420 420" xmlns="http://www.w3.org/2000/svg" aria-label="Dartboard" role="img">
+    <!-- dartboard segments and rings will be created by JS -->
+  </svg>
+  <p>Click on the dartboard to throw (3 throws per turn)</p>
+  <p id="turnDisplay"></p>
+</div>
 
-  <div class="log" id="log"></div>
+<div id="breakScreen">
+  <div>Break Time</div>
+  <div id="breakTimer">3:00</div>
+</div>
 
-  <div id="breakScreen">
-    <div>Break Time</div>
-    <div id="breakTimer">3:00</div>
-  </div>
+<div id="log"></div>
 
-  <script>
+<script>
+  // Constants for dartboard layout & scoring order
+  const segmentOrder = [20,1,18,4,13,9,14,11,8,16,7,19,3,17,2,15,10,6,5,12];
+  const boardSize = 420;
+  const center = boardSize/2;
+  const radii = {
+    outer: 200,
+    doubleInner: 190,
+    doubleOuter: 200,
+    tripleInner: 125,
+    tripleOuter: 140,
+    outerBull: 25,
+    bull: 12,
+  };
+
+  const dartboard = document.getElementById('dartboard');
+
+  // Draw the dartboard using SVG paths
+  function drawDartboard() {
+    dartboard.innerHTML = ''; // clear
+
+    // Background circle black
+    const bgCircle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+    bgCircle.setAttribute("cx", center);
+    bgCircle.setAttribute("cy", center);
+    bgCircle.setAttribute("r", radii.outer);
+    bgCircle.setAttribute("fill", "#111");
+    dartboard.appendChild(bgCircle);
+
+    // Create segments: 20 slices, each 18deg
+    const sliceAngle = 360 / 20;
+
+    for(let i=0; i<20; i++) {
+      const startAngle = (sliceAngle * i) - 9; // center slices on multiples of 18deg
+      const endAngle = startAngle + sliceAngle;
+
+      // Calculate outer double ring segment path
+      const p1 = polarToCartesian(center, center, radii.doubleOuter, endAngle);
+      const p2 = polarToCartesian(center, center, radii.doubleOuter, startAngle);
+      const p3 = polarToCartesian(center, center, radii.doubleInner, startAngle);
+      const p4 = polarToCartesian(center, center, radii.doubleInner, endAngle);
+
+      // Double ring segment
+      const doublePath = `
+        M ${p1.x} ${p1.y}
+        A ${radii.doubleOuter} ${radii.doubleOuter} 0 0 0 ${p2.x} ${p2.y}
+        L ${p3.x} ${p3.y}
+        A ${radii.doubleInner} ${radii.doubleInner} 0 0 1 ${p4.x} ${p4.y}
+        Z
+      `;
+
+      // Create path element
+      const doubleSegment = document.createElementNS("http://www.w3.org/2000/svg", "path");
+      doubleSegment.setAttribute("d", doublePath);
+      doubleSegment.setAttribute("fill", i % 2 === 0 ? "#007700" : "#cc0000"); // alternating green/red
+      dartboard.appendChild(doubleSegment);
+
+      // Triple ring segment
+      const p5 = polarToCartesian(center, center, radii.tripleOuter, endAngle);
+      const p6 = polarToCartesian(center, center, radii.tripleOuter, startAngle);
+      const p7 = polarToCartesian(center, center, radii.tripleInner, startAngle);
+      const p8 = polarToCartesian(center, center, radii.tripleInner, endAngle);
+
+      const triplePath = `
+        M ${p5.x} ${p5.y}
+        A ${radii.tripleOuter} ${radii.tripleOuter} 0 0 0 ${p6.x} ${p6.y}
+        L ${p7.x} ${p7.y}
+        A ${radii.tripleInner} ${radii.tripleInner} 0 0 1 ${p8.x} ${p8.y}
+        Z
+      `;
+
+      const tripleSegment = document.createElementNS("http://www.w3.org/2000/svg", "path");
+      tripleSegment.setAttribute("d", triplePath);
+      tripleSegment.setAttribute("fill", i % 2 === 0 ? "#cc0000" : "#007700"); // alternating red/green opposite of double
+      dartboard.appendChild(tripleSegment);
+
+      // Single areas (outer and inner) - white and black alternating
+      // Outer single: between doubleOuter and tripleOuter
+      const p9 = polarToCartesian(center, center, radii.outer, endAngle);
+      const p10 = polarToCartesian(center, center, radii.outer, startAngle);
+      const p11 = polarToCartesian(center, center, radii.tripleOuter, startAngle);
+      const p12 = polarToCartesian(center, center, radii.tripleOuter, endAngle);
+
+      const outerSinglePath = `
+        M ${p9.x} ${p9.y}
+        A ${radii.outer} ${radii.outer} 0 0 0 ${p10.x} ${p10.y}
+        L ${p11.x} ${p11.y}
+        A ${radii.tripleOuter} ${radii.tripleOuter} 0 0 1 ${p12.x} ${p12.y}
+        Z
+      `;
+      const outerSingle = document.createElementNS("http://www.w3.org/2000/svg", "path");
+      outerSingle.setAttribute("d", outerSinglePath);
+      outerSingle.setAttribute("fill", i % 2 === 0 ? "#000" : "#fff");
+      dartboard.appendChild(outerSingle);
+
+      // Inner single: between doubleInner and tripleInner
+      const p13 = polarToCartesian(center, center, radii.doubleInner, endAngle);
+      const p14 = polarToCartesian(center, center, radii.doubleInner, startAngle);
+      const p15 = polarToCartesian(center, center, radii.tripleInner, startAngle);
+      const p16 = polarToCartesian(center, center, radii.tripleInner, endAngle);
+
+      const innerSinglePath = `
+        M ${p13.x} ${p13.y}
+        A ${radii.doubleInner} ${radii.doubleInner} 0 0 0 ${p14.x} ${p14.y}
+        L ${p15.x} ${p15.y}
+        A ${radii.tripleInner} ${radii.tripleInner} 0 0 1 ${p16.x} ${p16.y}
+        Z
+      `;
+      const innerSingle = document.createElementNS("http://www.w3.org/2000/svg", "path");
+      innerSingle.setAttribute("d", innerSinglePath);
+      innerSingle.setAttribute("fill", i % 2 === 0 ? "#fff" : "#000");
+      dartboard.appendChild(innerSingle);
+
+      // Numbers around board
+      const angleRad = (sliceAngle * i - 90) * Math.PI/180;
+      const numX = center + Math.cos(angleRad) * (radii.outer + 15);
+      const numY = center + Math.sin(angleRad) * (radii.outer + 15);
+
+      const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
+      text.setAttribute("x", numX);
+      text.setAttribute("y", numY + 6); // vertical adjust
+      text.setAttribute("font-size", "20");
+      text.setAttribute("font-weight", "bold");
+      text.setAttribute("fill", "#ffcc00");
+      text.setAttribute("text-anchor", "middle");
+      text.style.textShadow = "0 0 3px black";
+      text.textContent = segmentOrder[i];
+      dartboard.appendChild(text);
+    }
+
+    // Helper to convert polar coords to cartesian
+    function polarToCartesian(cx, cy, radius, angleInDegrees) {
+      const angleInRadians = (angleInDegrees) * Math.PI / 180.0;
+      return {
+        x: cx + (radius * Math.cos(angleInRadians)),
+        y: cy + (radius * Math.sin(angleInRadians))
+      };
+    }
+
+    drawDartboard();
+
+    // Players, game state, scoring
+
     let players = [];
-    let matches = [];
-    let scores = {};
-    let throws = [];
+    let tournamentMode = false;
+    let fullTournament = false;
     let gameMode = 501;
-    let matchIndex = 0;
-    let playerIndex = 0;
+
+    // Store game state
+    let currentMatch = null;
+    let currentPlayerIndex = 0;
+    let throwsThisTurn = [];
+    let matchQueue = [];
+    let scores = {}; // playerName: currentScore
+    let lastScores = {}; // playerName: last throw total
     let winners = [];
     let losers = [];
 
+    // UI elements
+    const playerListEl = document.getElementById('playerList');
+    const gameModeEl = document.getElementById('gameMode');
+    const tournamentModeEl = document.getElementById('tournamentMode');
+    const fullTournamentEl = document.getElementById('fullTournament');
+    const playerNameInput = document.getElementById('playerName');
+    const setupDiv = document.getElementById('setup');
+    const gameAreaDiv = document.getElementById('gameArea');
+    const matchTitleEl = document.getElementById('matchTitle');
+    const turnDisplayEl = document.getElementById('turnDisplay');
+    const breakScreen = document.getElementById('breakScreen');
+    const breakTimer = document.getElementById('breakTimer');
+    const logEl = document.getElementById('log');
+
+    gameModeEl.onchange = () => {
+      gameMode = parseInt(gameModeEl.value);
+    };
+    tournamentModeEl.onchange = () => {
+      tournamentMode = tournamentModeEl.checked;
+    };
+    fullTournamentEl.onchange = () => {
+      fullTournament = fullTournamentEl.checked;
+    };
+
+    function log(msg) {
+      const time = new Date().toLocaleTimeString();
+      logEl.innerHTML += `[${time}] ${msg}<br>`;
+      logEl.scrollTop = logEl.scrollHeight;
+    }
+
     function addPlayer() {
-      const name = document.getElementById('playerName').value.trim();
-      if (name) {
-        players.push(name);
-        document.getElementById('playerList').innerHTML = players.map(p => `<li>${p}</li>`).join('');
-        document.getElementById('playerName').value = '';
+      let name = playerNameInput.value.trim();
+      if (!name) return alert('Enter a player name');
+      if (players.includes(name)) {
+        alert('Player already added');
+        return;
       }
+      players.push(name);
+      updatePlayerList();
+      playerNameInput.value = '';
+    }
+
+    function updatePlayerList() {
+      playerListEl.innerHTML = '';
+      players.forEach(p => {
+        const li = document.createElement('li');
+        li.textContent = p;
+        playerListEl.appendChild(li);
+      });
     }
 
     function startTournament() {
-      gameMode = parseInt(document.getElementById("gameMode").value);
-      const full = document.getElementById("fullTournament").checked;
+      if (players.length < 2) return alert('Add at least two players');
 
-      matches = [];
-      if (full) {
-        for (let i = 0; i < players.length; i++) {
-          for (let j = i + 1; j < players.length; j++) {
-            matches.push([players[i], players[j]]);
-          }
-        }
+      setupDiv.style.display = 'none';
+      gameAreaDiv.style.display = 'block';
+
+      // Initialize scores
+      players.forEach(p => {
+        scores[p] = gameMode;
+        lastScores[p] = 0;
+      });
+
+      // Create match queue (round robin or immediate)
+      if (!tournamentMode) {
+        // Single match: first two players
+        currentMatch = [players[0], players[1]];
+        matchQueue = [];
       } else {
-        for (let i = 0; i < players.length - 1; i += 2) {
-          matches.push([players[i], players[i + 1]]);
+        if (fullTournament) {
+          // Round robin pairs for full tournament
+          matchQueue = generateRoundRobinMatches(players);
+          currentMatch = matchQueue.shift();
+        } else {
+          // Immediate places: first round then playoffs etc.
+          matchQueue = generateImmediateTournamentMatches(players);
+          currentMatch = matchQueue.shift();
         }
       }
 
-      matchIndex = 0;
-      startMatch();
+      currentPlayerIndex = 0;
+      throwsThisTurn = [];
+      updateMatchUI();
+      saveState();
     }
 
-    function startMatch() {
-      if (matchIndex >= matches.length) {
-        log("Tournament Finished");
-        localStorage.setItem("darts_final_results", JSON.stringify(winners.concat(losers)));
+    // Round robin generator for pairs of players
+    function generateRoundRobinMatches(players) {
+      let matches = [];
+      for(let i=0; i<players.length; i++) {
+        for(let j=i+1; j<players.length; j++) {
+          matches.push([players[i], players[j]]);
+        }
+      }
+      return matches;
+    }
+
+    // Immediate places (simplified - first round pairs)
+    function generateImmediateTournamentMatches(players) {
+      let matches = [];
+      for(let i=0; i+1 < players.length; i+=2) {
+        matches.push([players[i], players[i+1]]);
+      }
+      return matches;
+    }
+
+    function updateMatchUI() {
+      if (!currentMatch) {
+        matchTitleEl.textContent = 'No active match';
+        turnDisplayEl.textContent = '';
         return;
       }
-
-      throws = [];
-      playerIndex = 0;
-      const match = matches[matchIndex];
-      scores = {
-        [match[0]]: { score: gameMode, history: [], last: 0 },
-        [match[1]]: { score: gameMode, history: [], last: 0 }
-      };
-
-      document.getElementById('setup').style.display = 'none';
-      document.getElementById('gameArea').style.display = 'block';
-      updateUI();
-      syncGame();
+      matchTitleEl.textContent = `Match: ${currentMatch[0]} vs ${currentMatch[1]}`;
+      turnDisplayEl.textContent = `Turn: ${currentMatch[currentPlayerIndex]}`;
     }
 
-    function throwDart(event) {
-      const rect = event.target.getBoundingClientRect();
-      const x = event.clientX - rect.left;
-      const y = event.clientY - rect.top;
-      const dx = x - 100;
-      const dy = y - 100;
-      const dist = Math.sqrt(dx * dx + dy * dy);
+    // Calculate score from dartboard click
+    function getScoreFromCoords(x, y) {
+      const dx = x - center;
+      const dy = y - center;
+      const dist = Math.sqrt(dx*dx + dy*dy);
 
-      let score = 0;
-      if (dist < 5) score = 50;
-      else if (dist < 10) score = 25;
-      else if (dist < 40) score = 20;
-      else if (dist < 60) score = 10;
-      else if (dist < 90) score = 5;
-      else score = 1;
+      if (dist > radii.outer) return 0;
 
-      throws.push(score);
-      log(`${getCurrentPlayer()} scored ${score}`);
+      // Angle 0 = top (20)
+      let angle = Math.atan2(dy, dx) * 180/Math.PI;
+      angle = (angle + 450) % 360; // rotate to have 0 at top
 
-      if (throws.length === 3) {
-        finishTurn();
+      // Determine segment (each 18deg)
+      const segmentIndex = Math.floor(angle / 18);
+      const segmentValue = segmentOrder[segmentIndex];
+
+      // Determine multiplier (double/triple/single)
+      if (dist >= radii.doubleInner && dist <= radii.doubleOuter) {
+        return segmentValue * 2;
+      } else if (dist >= radii.tripleInner && dist <= radii.tripleOuter) {
+        return segmentValue * 3;
+      } else if (dist <= radii.bull) {
+        return 50;
+      } else if (dist <= radii.outerBull) {
+        return 25;
+      } else {
+        return segmentValue;
       }
     }
 
-    function finishTurn() {
-      const player = getCurrentPlayer();
-      const total = throws.reduce((a, b) => a + b, 0);
-      scores[player].score -= total;
-      scores[player].last = total;
-      scores[player].history.push(total);
-      showPopup(`${player} scored ${total}`);
-      log(`${player} now has ${scores[player].score}`);
+    dartboard.addEventListener('click', e => {
+      if (!currentMatch) return alert('No active match');
 
-      if (scores[player].score <= 0) {
-        const opponent = getOpponent();
-        winners.push(player);
-        losers.push(opponent);
-        showPopup(`${player} WINS!`);
-        matchIndex++;
-        startBreak();
-        return;
+      // Get relative coords inside SVG
+      const rect = dartboard.getBoundingClientRect();
+      const scaleX = boardSize / rect.width;
+      const scaleY = boardSize / rect.height;
+      const clickX = (e.clientX - rect.left) * scaleX;
+      const clickY = (e.clientY - rect.top) * scaleY;
+
+      // Calculate score from coords
+      const score = getScoreFromCoords(clickX, clickY);
+
+      throwsThisTurn.push(score);
+
+      log(`${currentMatch[currentPlayerIndex]} threw ${score} (throw ${throwsThisTurn.length}/3)`);
+
+      if (throwsThisTurn.length >= 3) {
+        // Calculate total throw
+        const turnScore = throwsThisTurn.reduce((a,b) => a+b, 0);
+        // Update player score
+        const player = currentMatch[currentPlayerIndex];
+        let newScore = scores[player] - turnScore;
+
+        if (newScore < 0) {
+          // Bust - score reverts to previous
+          log(`${player} busted! Score reverts to ${scores[player]}`);
+          newScore = scores[player];
+        } else if (newScore === 0) {
+          log(`${player} finished the game!`);
+          winners.push(player);
+          advanceMatch();
+          return;
+        }
+        scores[player] = newScore;
+        lastScores[player] = turnScore;
+
+        // Switch player
+        currentPlayerIndex = 1 - currentPlayerIndex;
+        throwsThisTurn = [];
+
+        updateMatchUI();
+        saveState();
       }
+    });
 
-      playerIndex = (playerIndex + 1) % 2;
-      throws = [];
-      updateUI();
-      syncGame();
+    function advanceMatch() {
+      // For simplicity, after a match ends move to next in queue
+      if (matchQueue.length > 0) {
+        currentMatch = matchQueue.shift();
+        scores[currentMatch[0]] = gameMode;
+        scores[currentMatch[1]] = gameMode;
+        lastScores[currentMatch[0]] = 0;
+        lastScores[currentMatch[1]] = 0;
+        currentPlayerIndex = 0;
+        throwsThisTurn = [];
+        updateMatchUI();
+        saveState();
+      } else {
+        log('Tournament ended!');
+        currentMatch = null;
+        updateMatchUI();
+        saveState();
+      }
     }
 
-    function getCurrentPlayer() {
-      return matches[matchIndex][playerIndex];
-    }
-
-    function getOpponent() {
-      return matches[matchIndex][(playerIndex + 1) % 2];
-    }
-
-    function updateUI() {
-      const match = matches[matchIndex];
-      document.getElementById("matchTitle").textContent = `Match: ${match[0]} vs ${match[1]}`;
-      document.getElementById("turnDisplay").textContent = `Turn: ${getCurrentPlayer()}`;
-    }
-
-    function syncGame() {
-      localStorage.setItem("darts_game", JSON.stringify({
-        match: matches[matchIndex],
+    // Save/load state from localStorage
+    function saveState() {
+      const state = {
+        players,
+        tournamentMode,
+        fullTournament,
+        gameMode,
         scores,
-        currentPlayer: playerIndex,
+        lastScores,
+        currentMatch,
+        currentPlayerIndex,
+        throwsThisTurn,
+        matchQueue,
         winners,
         losers,
-        throws
-      }));
+      };
+      localStorage.setItem('dartsState', JSON.stringify(state));
     }
 
-    function showPopup(message) {
-      localStorage.setItem("darts_popup", JSON.stringify({ message, timestamp: Date.now() }));
-    }
-
-    function log(message) {
-      const el = document.getElementById("log");
-      const div = document.createElement("div");
-      div.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
-      el.prepend(div);
-    }
-
-    function startBreak() {
-      const screen = document.getElementById("breakScreen");
-      const timer = document.getElementById("breakTimer");
-      let seconds = 180;
-      screen.style.display = 'flex';
-      const interval = setInterval(() => {
-        seconds--;
-        const min = Math.floor(seconds / 60);
-        const sec = seconds % 60;
-        timer.textContent = `${min}:${sec.toString().padStart(2, '0')}`;
-        if (seconds <= 0) {
-          clearInterval(interval);
-          screen.style.display = 'none';
-          startMatch();
+    function loadState() {
+      const saved = localStorage.getItem('dartsState');
+      if (saved) {
+        try {
+          const state = JSON.parse(saved);
+          players = state.players || [];
+          tournamentMode = state.tournamentMode || false;
+          fullTournament = state.fullTournament || false;
+          gameMode = state.gameMode || 501;
+          scores = state.scores || {};
+          lastScores = state.lastScores || {};
+          currentMatch = state.currentMatch;
+          currentPlayerIndex = state.currentPlayerIndex || 0;
+          throwsThisTurn = state.throwsThisTurn || [];
+          matchQueue = state.matchQueue || [];
+          winners = state.winners || [];
+          losers = state.losers || [];
+          updatePlayerList();
+          updateMatchUI();
+          if(players.length > 0) {
+            setupDiv.style.display = 'none';
+            gameAreaDiv.style.display = 'block';
+          }
+        } catch(e) {
+          console.error('Failed to load state', e);
         }
-      }, 1000);
+      }
     }
-  </script>
+
+    loadState();
+</script>
+
 </body>
 </html>
-
-
