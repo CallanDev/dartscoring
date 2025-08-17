@@ -6,197 +6,193 @@
 <title>Darts Scoreboard</title>
 <style>
 body {
-background: radial-gradient(circle at center, #0a0a0a 0%, #121212 90%);
-color: #ffcc00;
-font-family: 'Arial Black', Arial, sans-serif;
-margin: 0;
-padding: 30px;
-user-select: none;
+  background: radial-gradient(circle at center, #0a0a0a 0%, #121212 90%);
+  color: #ffcc00;
+  font-family: 'Arial Black', Arial, sans-serif;
+  margin: 0;
+  padding: 30px;
+  user-select: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  min-height: 100vh;
 }
 h1 {
-text-align: center;
-font-size: 3rem;
-margin-bottom: 10px;
-text-shadow: 0 0 8px #ffcc00;
+  text-align: center;
+  font-size: 3rem;
+  margin-bottom: 10px;
+  text-shadow: 0 0 8px #ffcc00;
 }
 #matchInfo {
-text-align: center;
-font-size: 1.5rem;
-margin-bottom: 20px;
-letter-spacing: 1px;
+  text-align: center;
+  font-size: 1.5rem;
+  margin-bottom: 20px;
+  letter-spacing: 1px;
 }
 #scoreTable {
-margin: 0 auto;
-width: 400px;
-border-collapse: collapse;
+  margin: 0 auto;
+  width: 400px;
+  border-collapse: collapse;
 }
 #scoreTable th, #scoreTable td {
-border: 2px solid #ffcc00;
-padding: 15px 10px;
-font-size: 1.4rem;
-text-align: center;
+  border: 2px solid #ffcc00;
+  padding: 15px 10px;
+  font-size: 1.4rem;
+  text-align: center;
 }
 #scoreTable th {
-background: #333300;
+  background: #333300;
 }
 #scoreTable td.playerName {
-font-weight: bold;
-text-align: left;
-padding-left: 20px;
+  font-weight: bold;
+  text-align: left;
+  padding-left: 20px;
 }
 #popup {
-position: fixed;
-top: 15%;
-left: 50%;
-transform: translate(-50%, -50%);
-background: #222200;
-border: 3px solid #ffcc00;
-color: #fff;
-font-size: 2rem;
-padding: 20px 40px;
-border-radius: 10px;
-box-shadow: 0 0 15px #ffcc00;
-opacity: 0;
-pointer-events: none;
-transition: opacity 0.3s ease;
-z-index: 1000;
+  position: fixed;
+  top: 15%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: #222200;
+  border: 3px solid #ffcc00;
+  color: #fff;
+  font-size: 2rem;
+  padding: 20px 40px;
+  border-radius: 10px;
+  box-shadow: 0 0 15px #ffcc00;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+  z-index: 1000;
 }
 #finalResults {
-max-width: 500px;
-margin: 40px auto 0;
-background: #222200cc;
-border: 2px solid #ffcc00;
-border-radius: 12px;
-padding: 20px;
+  max-width: 500px;
+  margin: 40px auto 0;
+  background: #222200cc;
+  border: 2px solid #ffcc00;
+  border-radius: 12px;
+  padding: 20px;
 }
 #finalResults h2 {
-text-align: center;
-margin-bottom: 15px;
+  text-align: center;
+  margin-bottom: 15px;
 }
 #finalResults ol {
-font-size: 1.3rem;
-padding-left: 20px;
+  font-size: 1.3rem;
+  padding-left: 20px;
+}
+#logoOverlay {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: #000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+  pointer-events: none;
+}
+#logoOverlay img {
+  max-width: 60vw;
+  max-height: 60vh;
+  filter: drop-shadow(0 0 5px #ffcc00);
 }
 </style>
 </head>
 <body>
 
-<h1>Darts Scoreboard</h1>
-<div id="matchInfo">Waiting for game to start...</div>
-
-<table id="scoreTable" hidden>
-<thead>
-<tr><th>Player</th><th>Score</th><th>Average</th></tr>
-</thead>
-<tbody id="scoreBody"></tbody>
-</table>
-
-<div id="finalResults" hidden>
-<h2>Tournament Results</h2>
-<ol id="finalList"></ol>
+<div id="logoOverlay" class="hidden">
+  <img src="logo.png" alt="Darts Logo" />
 </div>
+
+<h1>Darts Scoreboard</h1>
+<div id="matchInfo">Loading match...</div>
+
+<table id="scoreTable" aria-label="Scoreboard">
+  <thead>
+    <tr>
+      <th>Player</th>
+      <th>Score</th>
+      <th>Average</th>
+    </tr>
+  </thead>
+  <tbody id="scoreBody"></tbody>
+</table>
 
 <div id="popup"></div>
 
 <script>
-const matchInfo = document.getElementById("matchInfo");
-const scoreTable = document.getElementById("scoreTable");
-const scoreBody = document.getElementById("scoreBody");
 const popup = document.getElementById("popup");
-const finalResults = document.getElementById("finalResults");
-const finalList = document.getElementById("finalList");
+const logoOverlay = document.getElementById("logoOverlay");
 
-let lastPopupTimestamp = 0;
-
-function renderScores(data) {
-const { players, scores, currentPlayerIndex } = data;
-
-if (!players || players.length === 0) {
-matchInfo.textContent = "Waiting for game to start...";
-scoreTable.hidden = true;
-return;
+function showPopup(message) {
+  popup.textContent = message;
+  popup.style.opacity = "1";
+  setTimeout(() => {
+    popup.style.opacity = "0";
+  }, 3000);
 }
 
-matchInfo.textContent = `Match: ${players[0]} vs ${players[1]} — Current Turn: ${players[currentPlayerIndex]}`;
+function renderScores(game) {
+  if (!game || !game.players) return;
 
-scoreBody.innerHTML = players.map((p) => {
-const s = scores[p];
-const avg = s.average || 0;
-return `<tr>
-<td class="playerName">${p}</td>
-<td>${s.score}</td>
-<td>${avg}</td>
-</tr>`;
-}).join("");
-scoreTable.hidden = false;
-finalResults.hidden = true;
-}
+  const tbody = document.getElementById("scoreBody");
+  tbody.innerHTML = "";
 
-function showPopupMessage(message) {
-popup.textContent = message;
-popup.style.opacity = "1";
-popup.style.pointerEvents = "auto";
+  for (const player of game.players) {
+    const s = game.scores[player];
+    const row = document.createElement("tr");
+    row.innerHTML = `
+      <td class="playerName">${player}</td>
+      <td>${s.score}</td>
+      <td>${s.average || 0}</td>
+    `;
+    tbody.appendChild(row);
+  }
 
-setTimeout(() => {
-popup.style.opacity = "0";
-popup.style.pointerEvents = "none";
-}, 2000);
+  document.getElementById("matchInfo").textContent = `Match: ${game.players.join(" vs ")}`;
+
 }
 
-// Listen for popup messages from localStorage
-function checkForPopup() {
-const popupData = localStorage.getItem("darts_popup");
-if (!popupData) return;
-try {
-const { message, timestamp } = JSON.parse(popupData);
-if (timestamp > lastPopupTimestamp) {
-lastPopupTimestamp = timestamp;
-showPopupMessage(message);
-}
-} catch (e) {
-// ignore parse errors
-}
-}
-
-// Listen for game updates from localStorage
-function updateFromStorage() {
-const gameDataRaw = localStorage.getItem("darts_game");
-if (gameDataRaw) {
-const data = JSON.parse(gameDataRaw);
-renderScores(data);
-finalResults.hidden = true;
-} else {
-// Check if final results are saved
-const finalRaw = localStorage.getItem("darts_final_results");
-if (finalRaw) {
-renderFinalResults(JSON.parse(finalRaw));
-} else {
-matchInfo.textContent = "Waiting for game to start...";
-scoreTable.hidden = true;
-finalResults.hidden = true;
-}
-}
+// Check lock state and update screen accordingly
+function updateLockState() {
+  const lockState = localStorage.getItem("darts_lock_screens");
+  if (lockState === "locked") {
+    // Show only logo
+    logoOverlay.classList.remove("hidden");
+    document.getElementById("scoreTable").style.display = "none";
+    document.getElementById("matchInfo").style.display = "none";
+  } else {
+    // Show full scoreboard
+    logoOverlay.classList.add("hidden");
+    document.getElementById("scoreTable").style.display = "";
+    document.getElementById("matchInfo").style.display = "";
+  }
 }
 
-// Render tournament final results
-function renderFinalResults(placements) {
-matchInfo.textContent = "Tournament Complete!";
-scoreTable.hidden = true;
-finalResults.hidden = false;
-finalList.innerHTML = placements
-.map((p, i) => `<li><strong>Place ${i + 1}:</strong> ${p}</li>`)
-.join("");
+// Main loop: read game data and popup messages from localStorage
+function update() {
+  updateLockState();
+
+  const rawGame = localStorage.getItem("darts_game");
+  if (rawGame) {
+    const game = JSON.parse(rawGame);
+    renderScores(game);
+  }
+
+  const popupData = localStorage.getItem("darts_popup");
+  if (popupData) {
+    const { message, timestamp } = JSON.parse(popupData);
+    if (Date.now() - timestamp < 3000) {
+      showPopup(message);
+    } else {
+      localStorage.removeItem("darts_popup");
+    }
+  }
 }
 
-// Periodically check localStorage for updates
-setInterval(() => {
-checkForPopup();
-updateFromStorage();
-}, 500);
-
-// Initial update on load
-updateFromStorage();
+setInterval(update, 500);
+update();
 </script>
-
 </body>
 </html>
