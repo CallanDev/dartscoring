@@ -1,496 +1,200 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Darts Admin</title>
-<style>
-  body {
-    font-family: 'Arial', sans-serif;
-    background-color: #1a1a1a;
-    color: #fff;
-    margin: 0; padding: 20px;
-  }
-  h1, h2 {
-    color: #ffcc00;
-  }
-  input, select, button {
-    padding: 8px; margin: 5px 0; font-size: 1rem;
-  }
-  .section {
-    margin-top: 20px;
-  }
-  .hidden {
-    display: none;
-  }
-  #playerList li {
-    margin-bottom: 4px;
-  }
-  #joinedPlayersList img {
-    height: 32px; width: 32px; object-fit: cover; border-radius: 50%; margin-right: 8px;
-    vertical-align: middle;
-  }
-  #joinedPlayersList span {
-    vertical-align: middle;
-  }
-  #logoToggle {
-    padding: 10px 20px;
-    font-weight: bold;
-    border: none;
-    color: white;
-    cursor: pointer;
-    border-radius: 5px;
-  }
-  #logoToggle.red {
-    background-color: #cc0000;
-  }
-  #logoToggle.green {
-    background-color: #009900;
-  }
-  /* Tournament match selects */
-  .match-selectors > div {
-    margin-bottom: 10px;
-  }
-</style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>dartScore - Admin</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #111;
+      color: #fff;
+      padding: 20px;
+    }
+    h1, h2 {
+      color: #ffcc00;
+    }
+    button, select, input {
+      margin: 5px 0;
+      padding: 10px;
+      font-size: 1rem;
+    }
+    #logoToggle {
+      background: red;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      cursor: pointer;
+    }
+    #logoToggle.active {
+      background: green;
+    }
+    .section {
+      margin-top: 20px;
+    }
+    .log {
+      background: #222;
+      padding: 10px;
+      max-height: 200px;
+      overflow-y: auto;
+      font-size: 0.85rem;
+    }
+  </style>
 </head>
 <body>
+  <h1>Darts Admin Panel</h1>
 
-<h1>Darts Admin</h1>
-
-<div class="section">
-  <label for="gameSelect">Select Game:</label>
-  <select id="gameSelect">
-    <option value="practice">Practice</option>
-    <option value="301">301</option>
-    <option value="501" selected>501</option>
-    <option value="701">701</option>
-    <option value="lastManStanding">Last Man Standing</option>
-    <option value="ballSmash">Ball Smash</option>
-  </select>
-</div>
-
-<div class="section">
-  <label>Game Mode (for 301, 501, 701):</label>
-  <select id="gameMode">
-    <option value="301">301</option>
-    <option value="501" selected>501</option>
-    <option value="701">701</option>
-  </select>
-</div>
-
-<div class="section">
-  <label>
-    <input type="checkbox" id="tournamentMode" />
-    Tournament Mode
-  </label>
-</div>
-
-<div class="section">
-  <label>Add Player:</label>
-  <input type="text" id="playerName" placeholder="Player name" />
-  <button onclick="addPlayer()">Add Player</button>
-</div>
-
-<ul id="playerList"></ul>
-
-<div id="tournamentMatches" class="match-selectors hidden"></div>
-
-<div class="section">
-  <button onclick="openJoining()">OPEN JOINING</button>
-  <button onclick="startGame()" disabled id="startGameBtn">START GAME</button>
-  <button onclick="endGame()" disabled id="endGameBtn">END GAME</button>
-</div>
-
-<div class="section" id="scoreInputSection" class="hidden" style="margin-top: 30px;">
-  <h2>Input Scores / Throws</h2>
-  <div id="matchTitle" style="font-weight:bold; font-size:1.2rem; margin-bottom:5px;"></div>
-  <div id="currentTurn" style="margin-bottom:15px;"></div>
-
-  <form id="scoreForm" onsubmit="event.preventDefault(); submitScore();">
-    <label for="throw1">Throw 1:</label>
-    <input type="number" id="throw1" min="0" max="180" required />
-    <label for="throw2">Throw 2:</label>
-    <input type="number" id="throw2" min="0" max="180" required />
-    <label for="throw3">Throw 3:</label>
-    <input type="number" id="throw3" min="0" max="180" required />
+  <div class="section">
+    <h2>Game Setup</h2>
+    <label>Game Mode:</label>
+    <select id="gameMode">
+      <option value="practice">Practice</option>
+      <option value="301">301</option>
+      <option value="501" selected>501</option>
+      <option value="701">701</option>
+      <option value="lastman">Last Man Standing</option>
+      <option value="ballsmash">Ball Smash</option>
+    </select>
     <br />
-    <button type="submit">Submit Score</button>
-  </form>
-</div>
+    <button onclick="openJoining()">Open Joining</button>
+    <button onclick="startGame()">Start Game</button>
+    <button onclick="endGame()">End Game</button>
+    <br />
+    <button id="logoToggle" onclick="toggleLogo()">LOGO SCREEN</button>
+  </div>
 
-<div class="section" id="joinedPlayersSection" style="margin-top:30px;">
-  <h2>Players Joined (with images)</h2>
-  <ul id="joinedPlayersList"></ul>
-</div>
+  <div id="scoreSection" class="section" style="display:none;">
+    <h2>Enter Score</h2>
+    <div id="currentPlayerDisplay"></div>
+    <label>Throw 1:</label>
+    <input type="number" id="throw1" min="0" max="180" /><br/>
+    <label>Throw 2:</label>
+    <input type="number" id="throw2" min="0" max="180" /><br/>
+    <label>Throw 3:</label>
+    <input type="number" id="throw3" min="0" max="180" /><br/>
+    <button onclick="submitScore()">Submit Score</button>
+  </div>
 
-<div class="section">
-  <button id="logoToggle" class="red" onclick="toggleLogo()">LOGO SCREEN OFF</button>
-</div>
+  <div class="section log" id="log"></div>
 
-<div class="section log" id="log" style="max-height: 150px; overflow-y: auto; background: #222; padding: 10px; font-size: 0.9rem; margin-top: 30px;"></div>
+  <script>
+    let gameData = {
+      active: false,
+      mode: '501',
+      players: [],
+      scores: {},
+      turn: 0,
+      log: [],
+      allowJoin: false
+    };
 
-<script>
-  // Globals
-  let players = [];
-  let joinedPlayers = [];
-  let tournamentMatches = [];
-  let currentMatchIndex = 0;
-  let currentPlayerIndex = 0;
-  let gameMode = 501;
-  let isTournament = false;
-  let currentGame = '501';
-  let gameStarted = false;
-  let scores = {};
-  let matchScores = {};
-  let matchWinners = [];
-  let matchLosers = [];
-  let logoScreenOn = false;
-
-  // Add player to local array & UI
-  function addPlayer() {
-    const input = document.getElementById("playerName");
-    const name = input.value.trim();
-    if (!name) return alert("Please enter a player name.");
-    if (players.some(p => p.name === name)) {
-      return alert("Player already added.");
-    }
-    players.push({ name });
-    input.value = "";
-    renderPlayerList();
-  }
-
-  // Render player list (names only)
-  function renderPlayerList() {
-    const list = document.getElementById("playerList");
-    if (players.length === 0) {
-      list.innerHTML = "<li>No players added</li>";
-      document.getElementById("startGameBtn").disabled = true;
-      return;
-    }
-    list.innerHTML = players.map(p => `<li>${p.name}</li>`).join("");
-    document.getElementById("startGameBtn").disabled = players.length < 2;
-    // Render tournament matches if enabled
-    if (isTournament && players.length >= 2) {
-      renderTournamentSelectors();
-    } else {
-      document.getElementById("tournamentMatches").classList.add("hidden");
-      tournamentMatches = [];
-    }
-  }
-
-  // Render tournament match selectors
-  function renderTournamentSelectors() {
-    const container = document.getElementById("tournamentMatches");
-    container.innerHTML = "<h3>Assign Matches</h3>";
-    const matchCount = Math.floor(players.length / 2);
-    for (let i = 0; i < matchCount; i++) {
-      container.innerHTML += `
-        <div>
-          Match ${i + 1}:
-          <select id="match_${i}_p1">${players.map(p => `<option value="${p.name}">${p.name}</option>`).join('')}</select>
-          vs
-          <select id="match_${i}_p2">${players.map(p => `<option value="${p.name}">${p.name}</option>`).join('')}</select>
-        </div>
-      `;
-    }
-    container.classList.remove("hidden");
-  }
-
-  // Open joining screen: sets flag in localStorage
-  function openJoining() {
-    if (players.length < 2) {
-      alert("Add at least 2 players before opening joining.");
-      return;
-    }
-    currentGame = document.getElementById("gameSelect").value;
-    gameMode = parseInt(document.getElementById("gameMode").value);
-    isTournament = document.getElementById("tournamentMode").checked;
-
-    localStorage.setItem("darts_joining_open", "true");
-    localStorage.setItem("darts_game_info", JSON.stringify({
-      players,
-      currentGame,
-      gameMode,
-      isTournament,
-    }));
-    log(`Joining opened for game: ${currentGame}`);
-    renderJoinedPlayers([]);
-    joinedPlayers = [];
-    localStorage.removeItem("darts_joined_players");
-
-    // Enable start game button
-    document.getElementById("startGameBtn").disabled = false;
-    gameStarted = false;
-  }
-
-  // Render joined players list on admin page
-  function renderJoinedPlayers(joined) {
-    const ul = document.getElementById("joinedPlayersList");
-    if (joined.length === 0) {
-      ul.innerHTML = "<li>No players joined yet</li>";
-      return;
-    }
-    ul.innerHTML = joined.map(p => `
-      <li>
-        <img src="${p.image || ''}" alt="avatar" /> <span>${p.name}</span>
-      </li>
-    `).join("");
-  }
-
-  // Listen for joined players updates from localStorage
-  setInterval(() => {
-    const joinedRaw = localStorage.getItem("darts_joined_players");
-    if (joinedRaw) {
-      const joined = JSON.parse(joinedRaw);
-      if (JSON.stringify(joined) !== JSON.stringify(joinedPlayers)) {
-        joinedPlayers = joined;
-        renderJoinedPlayers(joinedPlayers);
-        log(`Players joined: ${joinedPlayers.length}`);
-      }
-    }
-  }, 700);
-
-  // Start game: close joining, initialize scores and UI
-  function startGame() {
-    if (joinedPlayers.length < 1) {
-      alert("No players have joined yet.");
-      return;
-    }
-    localStorage.setItem("darts_joining_open", "false");
-    localStorage.setItem("darts_game_started", "true");
-    localStorage.setItem("darts_players", JSON.stringify(joinedPlayers));
-    localStorage.setItem("darts_game_mode", currentGame);
-    localStorage.setItem("darts_game_mode_num", gameMode);
-    localStorage.setItem("darts_is_tournament", isTournament);
-
-    // Initialize scores per player
-    scores = {};
-    joinedPlayers.forEach(p => {
-      scores[p.name] = { score: gameMode, history: [], average: 0, shots: 0, totalPoints: 0 };
-    });
-
-    // Setup tournament matches if enabled
-    if (isTournament) {
-      setupTournamentMatches();
-    } else {
-      tournamentMatches = [joinedPlayers.map(p => p.name)];
+    function openJoining() {
+      gameData.allowJoin = true;
+      gameData.active = false;
+      gameData.players = [];
+      gameData.scores = {};
+      gameData.turn = 0;
+      sync();
+      log("Joining opened. Waiting for players.");
     }
 
-    currentMatchIndex = 0;
-    currentPlayerIndex = 0;
-    matchWinners = [];
-    matchLosers = [];
-    gameStarted = true;
-    document.getElementById("startGameBtn").disabled = true;
-    document.getElementById("endGameBtn").disabled = false;
-    document.getElementById("scoreInputSection").style.display = 'block';
-
-    startMatch();
-    log("Game started!");
-  }
-
-  // Setup tournament matches (randomly assign pairs, allow multiple games per player)
-  function setupTournamentMatches() {
-    // For simplicity, random pairs from joinedPlayers
-    let names = joinedPlayers.map(p => p.name);
-    shuffleArray(names);
-
-    tournamentMatches = [];
-    while (names.length >= 2) {
-      let p1 = names.pop();
-      let p2 = names.pop();
-      tournamentMatches.push([p1, p2]);
-    }
-    if (names.length === 1) {
-      // Odd player out plays solo match or wait (for last man standing etc)
-      tournamentMatches.push([names.pop()]);
-    }
-  }
-
-  // Start a match (tournament or single)
-  function startMatch() {
-    if (currentMatchIndex >= tournamentMatches.length) {
-      log("Tournament over.");
-      document.getElementById("scoreInputSection").style.display = 'none';
-      return;
-    }
-    const match = tournamentMatches[currentMatchIndex];
-    document.getElementById("matchTitle").innerText = "Match " + (currentMatchIndex + 1) + ": " + match.join(" vs ");
-    currentPlayerIndex = 0;
-    updateCurrentTurn();
-  }
-
-  // Update current player's turn display
-  function updateCurrentTurn() {
-    if (!gameStarted) return;
-    const match = tournamentMatches[currentMatchIndex];
-    if (!match || match.length === 0) return;
-    const playerName = match[currentPlayerIndex];
-    document.getElementById("currentTurn").innerText = "Current turn: " + playerName;
-  }
-
-  // Submit scores from form
-  function submitScore() {
-    if (!gameStarted) return alert("Game not started");
-
-    const t1 = parseInt(document.getElementById("throw1").value) || 0;
-    const t2 = parseInt(document.getElementById("throw2").value) || 0;
-    const t3 = parseInt(document.getElementById("throw3").value) || 0;
-    const totalThrow = t1 + t2 + t3;
-
-    const match = tournamentMatches[currentMatchIndex];
-    const player = match[currentPlayerIndex];
-    let pScore = scores[player];
-
-    if (!pScore) {
-      scores[player] = { score: gameMode, history: [], average: 0, shots: 0, totalPoints: 0 };
-      pScore = scores[player];
-    }
-
-    // Update score logic per game type:
-    if (currentGame === 'practice') {
-      // Practice: accumulate totalPoints only
-      pScore.totalPoints += totalThrow;
-      pScore.history.push(totalThrow);
-      pScore.shots++;
-      pScore.average = (pScore.totalPoints / pScore.shots).toFixed(2);
-    }
-    else if (currentGame === 'ballSmash') {
-      // Ball Smash scoring handled differently, for admin input assume totalThrow is points scored this turn
-      pScore.totalPoints += totalThrow;
-      pScore.history.push(totalThrow);
-      pScore.shots++;
-      pScore.average = (pScore.totalPoints / pScore.shots).toFixed(2);
-    }
-    else if (currentGame === 'lastManStanding') {
-      // In LMS, a throw reduces player's score, if zero or less, player eliminated
-      pScore.score -= totalThrow;
-      if (pScore.score <= 0) {
-        log(player + " eliminated!");
-        // Remove player from tournament matches or flag eliminated
-        match.splice(currentPlayerIndex, 1);
-        if (match.length === 1) {
-          log("Match winner: " + match[0]);
-          currentMatchIndex++;
-          startMatch();
-          return;
-        }
-      } else {
-        pScore.history.push(totalThrow);
-        pScore.shots++;
-        pScore.average = (pScore.totalPoints / pScore.shots).toFixed(2);
-        currentPlayerIndex = (currentPlayerIndex + 1) % match.length;
-      }
-    }
-    else {
-      // 301, 501, 701 logic (subtract from score, check bust etc)
-      let newScore = pScore.score - totalThrow;
-      if (newScore < 0) {
-        log(player + " busted!");
-        // Score stays same, next player
-      } else if (newScore === 0) {
-        log(player + " wins the match!");
-        // Match winner, advance tournament
-        currentMatchIndex++;
-        startMatch();
+    function startGame() {
+      if (gameData.players.length < 1) {
+        alert("No players have joined.");
         return;
-      } else {
-        pScore.score = newScore;
       }
-      pScore.history.push(totalThrow);
-      pScore.shots++;
-      pScore.average = (pScore.history.reduce((a,b) => a+b,0) / pScore.shots).toFixed(2);
-
-      currentPlayerIndex = (currentPlayerIndex + 1) % match.length;
+      gameData.mode = document.getElementById('gameMode').value;
+      gameData.active = true;
+      gameData.allowJoin = false;
+      gameData.scores = {};
+      gameData.turn = 0;
+      for (const p of gameData.players) {
+        gameData.scores[p.name] = {
+          score: ['301', '501', '701'].includes(gameData.mode) ? parseInt(gameData.mode) : 0,
+          history: [],
+          average: 0,
+          total: 0,
+          shots: 0
+        };
+      }
+      document.getElementById('scoreSection').style.display = 'block';
+      updateCurrentPlayerDisplay();
+      sync();
+      log("Game started.");
     }
 
-    updateCurrentTurn();
-    saveScores();
-    clearThrows();
-  }
-
-  // Clear throws input
-  function clearThrows() {
-    document.getElementById("throw1").value = "";
-    document.getElementById("throw2").value = "";
-    document.getElementById("throw3").value = "";
-  }
-
-  // Save scores to localStorage
-  function saveScores() {
-    localStorage.setItem("darts_scores", JSON.stringify(scores));
-  }
-
-  // End game and reset everything
-  function endGame() {
-    if (!confirm("End the current game? This will clear all data.")) return;
-    localStorage.removeItem("darts_joining_open");
-    localStorage.removeItem("darts_game_started");
-    localStorage.removeItem("darts_players");
-    localStorage.removeItem("darts_joined_players");
-    localStorage.removeItem("darts_scores");
-    localStorage.removeItem("darts_game_info");
-    localStorage.removeItem("darts_game_mode");
-    localStorage.removeItem("darts_is_tournament");
-
-    players = [];
-    joinedPlayers = [];
-    scores = {};
-    tournamentMatches = [];
-    gameStarted = false;
-    document.getElementById("playerList").innerHTML = "<li>No players added</li>";
-    document.getElementById("joinedPlayersList").innerHTML = "<li>No players joined yet</li>";
-    document.getElementById("scoreInputSection").style.display = 'none';
-    document.getElementById("startGameBtn").disabled = true;
-    document.getElementById("endGameBtn").disabled = true;
-    log("Game ended and reset.");
-  }
-
-  // Toggle logo screen
-  function toggleLogo() {
-    logoScreenOn = !logoScreenOn;
-    localStorage.setItem("darts_logo_on", logoScreenOn ? "true" : "false");
-    const btn = document.getElementById("logoToggle");
-    if (logoScreenOn) {
-      btn.classList.remove("red");
-      btn.classList.add("green");
-      btn.innerText = "LOGO SCREEN ON";
-    } else {
-      btn.classList.remove("green");
-      btn.classList.add("red");
-      btn.innerText = "LOGO SCREEN OFF";
+    function endGame() {
+      gameData.active = false;
+      gameData.allowJoin = false;
+      sync();
+      document.getElementById('scoreSection').style.display = 'none';
+      log("Game ended.");
     }
-    log("Logo screen toggled " + (logoScreenOn ? "ON" : "OFF"));
-  }
 
-  // Utility: Shuffle array
-  function shuffleArray(array) {
-    for (let i = array.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [array[i], array[j]] = [array[j], array[i]];
+    function toggleLogo() {
+      const btn = document.getElementById('logoToggle');
+      const active = btn.classList.toggle('active');
+      localStorage.setItem("darts_logo", active ? "on" : "off");
     }
-  }
 
-  // Log helper
-  function log(msg) {
-    const logEl = document.getElementById("log");
-    logEl.innerHTML += `<div>${msg}</div>`;
-    logEl.scrollTop = logEl.scrollHeight;
-  }
-
-  // On load
-  window.onload = () => {
-    renderPlayerList();
-    // Load logo screen state
-    if (localStorage.getItem("darts_logo_on") === "true") {
-      logoScreenOn = true;
-      const btn = document.getElementById("logoToggle");
-      btn.classList.remove("red");
-      btn.classList.add("green");
-      btn.innerText = "LOGO SCREEN ON";
+    function updateCurrentPlayerDisplay() {
+      const player = gameData.players[gameData.turn];
+      document.getElementById('currentPlayerDisplay').innerText = "Current Player: " + player.name;
     }
-  }
-</script>
 
+    function submitScore() {
+      const p = gameData.players[gameData.turn].name;
+      const t1 = parseInt(document.getElementById("throw1").value) || 0;
+      const t2 = parseInt(document.getElementById("throw2").value) || 0;
+      const t3 = parseInt(document.getElementById("throw3").value) || 0;
+      const total = t1 + t2 + t3;
+
+      let ps = gameData.scores[p];
+      if (gameData.mode === "practice") {
+        ps.total += total;
+        ps.shots += 3;
+      } else {
+        if (ps.score - total >= 0) {
+          ps.score -= total;
+        }
+        ps.total += total;
+        ps.shots += 3;
+        if (ps.score === 0) {
+          log(`${p} has finished the game!`);
+        }
+      }
+
+      ps.history.push(total);
+      ps.average = (ps.total / ps.shots).toFixed(2);
+      log(`${p} scored ${total}. New score: ${ps.score || ps.total}`);
+      
+      document.getElementById("throw1").value = "";
+      document.getElementById("throw2").value = "";
+      document.getElementById("throw3").value = "";
+
+      gameData.turn = (gameData.turn + 1) % gameData.players.length;
+      updateCurrentPlayerDisplay();
+      sync();
+    }
+
+    function log(msg) {
+      const el = document.getElementById("log");
+      el.innerHTML += `<div>${new Date().toLocaleTimeString()}: ${msg}</div>`;
+      el.scrollTop = el.scrollHeight;
+    }
+
+    function sync() {
+      localStorage.setItem("darts_game", JSON.stringify(gameData));
+    }
+
+    // Initial setup
+    setInterval(() => {
+      const joinList = JSON.parse(localStorage.getItem("darts_joined") || "[]");
+      if (gameData.allowJoin) {
+        gameData.players = joinList;
+        sync();
+      }
+    }, 1000);
+  </script>
 </body>
 </html>
