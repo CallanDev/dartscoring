@@ -23,9 +23,6 @@
     .active {
       border: 2px solid #ffcc00;
     }
-    .player h2 {
-      margin: 0;
-    }
     .score {
       font-size: 2rem;
       color: #0f0;
@@ -34,22 +31,47 @@
       font-size: 0.9rem;
       color: #aaa;
     }
+    #finalResults {
+      margin-top: 40px;
+    }
+    .placement {
+      background: #333;
+      margin: 10px auto;
+      padding: 10px;
+      border-radius: 8px;
+      width: 60%;
+    }
   </style>
 </head>
 <body>
   <h1>Darts Scoreboard</h1>
   <div id="scoreboard"></div>
+  <div id="finalResults"></div>
 
   <script>
     function render() {
-      const data = localStorage.getItem('darts_game');
-      if (!data) {
-        document.getElementById('scoreboard').innerHTML = '<p>No game in progress</p>';
+      const gameData = localStorage.getItem('darts_game');
+      const finalData = localStorage.getItem('darts_final_results');
+
+      const sb = document.getElementById('scoreboard');
+      const fr = document.getElementById('finalResults');
+
+      // Tournament has ended
+      if (!gameData && finalData) {
+        const placements = JSON.parse(finalData);
+        fr.innerHTML = `<h2>🏁 Final Placements</h2>` + placements.map((p, i) => {
+          let place = ["🥇 1st", "🥈 2nd", "🥉 3rd", "4th"];
+          return `<div class="placement">${place[i]}: ${p}</div>`;
+        }).join('');
         return;
       }
 
-      const { players, scores, currentPlayerIndex } = JSON.parse(data);
-      const sb = document.getElementById('scoreboard');
+      if (!gameData) {
+        sb.innerHTML = `<p>No game in progress.</p>`;
+        return;
+      }
+
+      const { players, scores, currentPlayerIndex } = JSON.parse(gameData);
       sb.innerHTML = players.map((p, i) => {
         const s = scores[p];
         return `
@@ -63,7 +85,8 @@
     }
 
     render();
-    setInterval(render, 1000); // Poll every second for updates
+    setInterval(render, 1000);
   </script>
 </body>
 </html>
+
