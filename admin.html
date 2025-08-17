@@ -1,151 +1,382 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>Admin Panel</title>
-  <style>
-    body { font-family: Arial, sans-serif; background: #111; color: #fff; padding: 20px; }
-    h1, h2 { color: #ffcc00; }
-    label, select, input, button { display: block; margin: 10px 0; font-size: 1rem; }
-    #logoToggle { padding: 10px; border: none; cursor: pointer; }
-    #logoToggle.on { background: green; }
-    #logoToggle.off { background: red; }
-    #throwSection { display: none; margin-top: 20px; }
-    #log { background: #222; padding: 10px; max-height: 200px; overflow-y: auto; }
-    #bracket { margin-top: 20px; }
-    .match { margin: 5px 0; }
-  </style>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Darts Admin</title>
+<style>
+body {
+  font-family: 'Arial', sans-serif;
+  background-color: #1a1a1a;
+  color: #fff;
+  margin: 0;
+  padding: 20px;
+}
+h1, h2 {
+  color: #ffcc00;
+}
+input, select, button {
+  padding: 8px;
+  margin: 5px 0;
+  font-size: 1rem;
+}
+.section {
+  margin-top: 20px;
+}
+.hidden {
+  display: none;
+}
+.match-selectors {
+  margin-top: 10px;
+}
+.score-input {
+  margin-top: 20px;
+}
+.log {
+  margin-top: 20px;
+  max-height: 150px;
+  overflow-y: auto;
+  background: #222;
+  padding: 10px;
+  font-size: 0.9rem;
+}
+label.throw-label {
+  display: inline-block;
+  width: 70px;
+}
+input.throw-input {
+  width: 50px;
+  text-align: center;
+  margin-right: 10px;
+}
+/* Player pic popup */
+#playerPicPopup {
+  position: fixed;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  background: #222;
+  border: 2px solid #ffcc00;
+  padding: 20px;
+  z-index: 10000;
+  width: 350px;
+}
+#playerPicPopup.hidden {
+  display: none;
+}
+#playerPicPopup h3 {
+  margin-top: 0;
+}
+#playerPicPopup input[type=text] {
+  width: 100%;
+  padding: 6px;
+  font-size: 1rem;
+}
+#playerPicPopup button {
+  margin-right: 10px;
+}
+/* Freeze overlay */
+#freezeOverlay {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.95);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.5s ease;
+  z-index: 100000;
+}
+#freezeOverlay.visible {
+  opacity: 1;
+  pointer-events: all;
+}
+#freezeOverlay img {
+  max-width: 70vw;
+  max-height: 70vh;
+  object-fit: contain;
+  filter: drop-shadow(0 0 10px #ffcc00);
+}
+/* Round timer display */
+#roundTimer {
+  font-weight: bold;
+  font-size: 1.2rem;
+  margin-top: 10px;
+  color: #ffcc00;
+}
+/* Player list with pics */
+#playerList li {
+  margin-bottom: 6px;
+  display: flex;
+  align-items: center;
+}
+#playerList img {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  margin-right: 8px;
+  object-fit: cover;
+}
+</style>
 </head>
 <body>
-  <h1>Admin Panel</h1>
 
-  <!-- Game Controls -->
+<h1>Darts Admin</h1>
+
+<div id="setupSection" class="section">
   <h2>Game Setup</h2>
-  <label>Game Type:
-    <select id="gameType">
-      <option value="practice">Practice</option>
-      <option value="301">301</option>
-      <option value="501">501</option>
-      <option value="701">701</option>
-      <option value="lastman">Last Man Standing</option>
-      <option value="ballsmash">Ball Smash</option>
-    </select>
-  </label>
-  <button onclick="openJoining()">Open Joining</button>
-  <button onclick="startGame()">Start Game</button>
-  <button onclick="endGame()">End Game</button>
-  <button id="logoToggle" class="off" onclick="toggleLogo()">Logo OFF</button>
 
-  <!-- Throw Input Section -->
-  <div id="throwSection">
-    <h2>Enter Throws</h2>
-    <div id="currentPlayer"></div>
-    <label>Throw 1: <input type="number" id="t1" min="0" max="180" /></label>
-    <label>Throw 2: <input type="number" id="t2" min="0" max="180" /></label>
-    <label>Throw 3: <input type="number" id="t3" min="0" max="180" /></label>
-    <button onclick="submitThrows()">Submit</button>
-    <div id="bracket"></div>
+  <label>Game Mode:</label>
+  <select id="gameMode">
+    <option value="301">301</option>
+    <option value="501" selected>501</option>
+    <option value="701">701</option>
+  </select>
+
+  <br />
+
+  <label>Tournament Mode:</label>
+  <input type="checkbox" id="tournamentMode" />
+
+  <br />
+
+  <label>Enable Round Time Limit:</label>
+  <input type="checkbox" id="enableRoundTimer" />
+  
+  <label for="roundTimeLimit">Time Limit per Round (seconds):</label>
+  <input type="number" id="roundTimeLimit" min="10" max="300" value="60" style="width: 80px;" />
+
+  <div class="section">
+    <label>Add Player:</label>
+    <input type="text" id="playerName" />
+    <button onclick="addPlayer()">Add</button>
   </div>
 
-  <h2>Log</h2>
-  <div id="log"></div>
+  <ul id="playerList"></ul>
+
+  <div id="tournamentMatches" class="match-selectors hidden"></div>
+
+  <button onclick="startGame()">Start Game</button>
+
+  <button onclick="toggleFreezeScreen()">FREEZE SCREEN</button>
+</div>
+
+<div id="roundTimer" class="hidden"></div>
+
+<form id="scoreForm" class="score-input hidden" onsubmit="event.preventDefault(); submitScore();">
+  <h2>Enter Score</h2>
+  <div id="matchTitle" style="font-weight:bold; font-size:1.2rem; margin-bottom:5px;"></div>
+  <div id="currentTurn" style="margin-bottom:15px;"></div>
+
+  <label class="throw-label" for="throw1">Throw 1:</label>
+  <input type="number" id="throw1" class="throw-input" min="0" max="180" required />
+  <label class="throw-label" for="throw2">Throw 2:</label>
+  <input type="number" id="throw2" class="throw-input" min="0" max="180" required />
+  <label class="throw-label" for="throw3">Throw 3:</label>
+  <input type="number" id="throw3" class="throw-input" min="0" max="180" required />
+  <br />
+  <button type="submit">Submit</button>
+</form>
+
+<div class="log" id="log"></div>
+
+<!-- Player Picture Popup -->
+<div id="playerPicPopup" class="hidden">
+  <h3>Add Player Picture</h3>
+  <label>Player Name: <span id="popupPlayerName"></span></label><br/><br/>
+  <label>Picture URL or leave blank for default:</label><br/>
+  <input type="text" id="playerPicUrl" placeholder="https://example.com/image.png" />
+  <br/><br/>
+  <button onclick="confirmAddPlayer()">Confirm</button>
+  <button onclick="cancelAddPlayer()">Cancel</button>
+</div>
+
+<!-- Freeze Screen Overlay -->
+<div id="freezeOverlay" class="hidden">
+  <img src="assets/Logo.png" alt="Freeze Screen" />
+</div>
 
 <script>
-// Core game data
-let game = { active: false, type: "", players: [], scores: {}, turn: 0, allowJoin: false };
+let players = [];
+let playerPics = {}; // playerName => pic URL
+let scores = {};
+let currentPlayerIndex = 0;
+let gameMode = 501;
+let isTournament = false;
 
-// Persist to localStorage
-function sync() { localStorage.setItem('darts_game', JSON.stringify(game)); }
+let tournamentMatches = [];
+let currentMatchIndex = 0;
+let matchScores = {};
+let matchWinners = [];
+let matchLosers = [];
+let roundNumber = 1;
+let totalRounds = 9;
 
-// Log utility
-function log(msg) {
-  const el = document.getElementById('log');
-  el.innerHTML += `<div>${new Date().toLocaleTimeString()} - ${msg}</div>`;
-  el.scrollTop = el.scrollHeight;
+let roundTimerEnabled = false;
+let roundTimeLimit = 60; // seconds
+let roundTimerInterval = null;
+let roundTimerRemaining = 0;
+
+let pendingPlayerName = null;
+
+function addPlayer() {
+  const input = document.getElementById("playerName");
+  const name = input.value.trim();
+  if (!name || players.includes(name)) return;
+
+  // Show picture popup
+  pendingPlayerName = name;
+  document.getElementById("popupPlayerName").textContent = name;
+  document.getElementById("playerPicUrl").value = "";
+  document.getElementById("playerPicPopup").classList.remove("hidden");
 }
 
-// Open joining
-function openJoining() {
-  game.allowJoin = true;
-  game.active = false;
-  game.players = [];
-  game.scores = {};
-  sync();
-  log('Joining opened.');
+function confirmAddPlayer() {
+  const picUrl = document.getElementById("playerPicUrl").value.trim() || "assets/default_player.png";
+  players.push(pendingPlayerName);
+  playerPics[pendingPlayerName] = picUrl;
+  pendingPlayerName = null;
+  document.getElementById("playerPicPopup").classList.add("hidden");
+  document.getElementById("playerName").value = "";
+  renderPlayerList();
 }
 
-// Start game
-function startGame() {
-  const joined = JSON.parse(localStorage.getItem('darts_joined')||'[]');
-  if (!joined.length) return alert('No players joined.');
-  game.type = document.getElementById('gameType').value;
-  game.active = true;
-  game.allowJoin = false;
-  game.players = [...joined];
-  game.scores = {};
-  game.players.forEach(p => game.scores[p.name] = { score:  (['301','501','701'].includes(game.type)? parseInt(game.type):0), throws: 0, total: 0 });
-  game.turn = 0;
-  sync();
-  document.getElementById('throwSection').style.display = 'block';
-  updateCurrentPlayer();
-  log('Game started.');
+function cancelAddPlayer() {
+  pendingPlayerName = null;
+  document.getElementById("playerPicPopup").classList.add("hidden");
 }
 
-// End game
-function endGame() {
-  game.active = false;
-  game.allowJoin = false;
-  sync();
-  document.getElementById('throwSection').style.display = 'none';
-  log('Game ended.');
-}
+function renderPlayerList() {
+  const list = document.getElementById("playerList");
+  list.innerHTML = players.map(p => {
+    const pic = playerPics[p] || "assets/default_player.png";
+    return `<li><img src="${pic}" alt="${p}" />${p}</li>`;
+  }).join("");
 
-// Toggle logo
-function toggleLogo() {
-  const btn = document.getElementById('logoToggle');
-  const on = btn.classList.toggle('on');
-  btn.classList.toggle('off', !on);
-  btn.innerText = on ? 'Logo ON' : 'Logo OFF';
-  localStorage.setItem('darts_logo', on ? 'on':'off');
-}
-
-// Update current player UI
-function updateCurrentPlayer() {
-  const cp = game.players[game.turn];
-  document.getElementById('currentPlayer').innerText = `Current: ${cp.name}`;
-}
-
-// Submit throws
-function submitThrows() {
-  const t1 = +document.getElementById('t1').value || 0;
-  const t2 = +document.getElementById('t2').value || 0;
-  const t3 = +document.getElementById('t3').value || 0;
-  const total = t1 + t2 + t3;
-  const name = game.players[game.turn];
-  const sc = game.scores[name];
-  if (['301','501','701'].includes(game.type)) {
-    if (sc.score - total >= 0) sc.score -= total;
+  if (
+    document.getElementById("tournamentMode").checked &&
+    players.length >= 2
+  ) {
+    renderTournamentSelectors();
   } else {
-    sc.total += total;
+    document.getElementById("tournamentMatches").classList.add("hidden");
   }
-  sc.throws++;
-  log(`${name} threw ${total}. Remaining: ${sc.score}`);
-  game.turn = (game.turn + 1) % game.players.length;
-  sync();
-  updateCurrentPlayer();
 }
 
-// Listen cross-tab join updates
-window.addEventListener('storage', e => {
-  if (e.key === 'darts_joined') sync();
+// Automatically create tournament matches for rounds 1 to 9, players can play multiple times in rounds
+function createTournamentRounds() {
+  tournamentMatches = [];
+
+  // We'll generate rounds of matches:
+  // For simplicity, each round is a list of matches (each match is pair of players)
+  // Players can appear multiple times per round
+
+  // For demonstration, do random pairing each round:
+  for (let r = 1; r <= totalRounds; r++) {
+    const matchesInRound = [];
+
+    // Shuffle players
+    const shuffled = [...players].sort(() => Math.random() - 0.5);
+
+    // Pair players (if odd, last player gets a bye)
+    for (let i = 0; i < shuffled.length - 1; i += 2) {
+      matchesInRound.push([shuffled[i], shuffled[i + 1]]);
+    }
+    if (shuffled.length % 2 === 1) {
+      // Odd player no match this round, add single player match for bye (auto win)
+      matchesInRound.push([shuffled[shuffled.length - 1]]);
+    }
+
+    tournamentMatches.push(matchesInRound);
+  }
+}
+
+// Show dropdown selectors for manual tournament matches (only for round 1)
+function renderTournamentSelectors() {
+  const container = document.getElementById("tournamentMatches");
+  container.innerHTML = "<h3>Assign Matches for Round 1</h3>";
+
+  const matchCount = Math.floor(players.length / 2);
+
+  for (let i = 0; i < matchCount; i++) {
+    container.innerHTML += `
+    <div style="margin-bottom:10px;">
+    Match ${i + 1}:
+    <select id="match_0_p1">${players.map(p => `<option value="${p}">${p}</option>`).join("")}</select>
+    vs
+    <select id="match_0_p2">${players.map(p => `<option value="${p}">${p}</option>`).join("")}</select>
+    </div>`;
+  }
+  container.classList.remove("hidden");
+}
+
+let manualTournament = false;
+let manualMatches = []; // array of matches for round 1
+
+function startGame() {
+  gameMode = parseInt(document.getElementById("gameMode").value);
+  isTournament = document.getElementById("tournamentMode").checked;
+  roundTimerEnabled = document.getElementById("enableRoundTimer").checked;
+  roundTimeLimit = parseInt(document.getElementById("roundTimeLimit").value) || 60;
+
+  if (players.length < 2) {
+    alert("Add at least 2 players.");
+    return;
+  }
+
+  // Save player pics & names to localStorage
+  localStorage.setItem("dartsPlayers", JSON.stringify(players));
+  localStorage.setItem("dartsPlayerPics", JSON.stringify(playerPics));
+  localStorage.setItem("dartsGameMode", gameMode);
+  localStorage.setItem("dartsTournament", isTournament);
+  localStorage.setItem("dartsRoundTimerEnabled", roundTimerEnabled);
+  localStorage.setItem("dartsRoundTimeLimit", roundTimeLimit);
+
+  if (isTournament) {
+    manualTournament = false;
+    createTournamentRounds();
+    currentMatchIndex = 0;
+    roundNumber = 1;
+    localStorage.setItem("dartsTournamentMatches", JSON.stringify(tournamentMatches));
+    localStorage.setItem("dartsRoundNumber", roundNumber);
+  } else {
+    localStorage.removeItem("dartsTournamentMatches");
+  }
+
+  // Initialize scores object (each player starts at gameMode)
+  scores = {};
+  players.forEach(p => (scores[p] = gameMode));
+  localStorage.setItem("dartsScores", JSON.stringify(scores));
+
+  localStorage.setItem("dartsCurrentPlayerIndex", 0);
+
+  alert("Game started! Go to scoreboard page.");
+
+  // Optionally redirect to scoreboard
+  window.location.href = "scoreboard.html";
+}
+
+function toggleFreezeScreen() {
+  const overlay = document.getElementById("freezeOverlay");
+  if (overlay.classList.contains("visible")) {
+    overlay.classList.remove("visible");
+    localStorage.setItem("dartsFreezeScreen", "false");
+  } else {
+    overlay.classList.add("visible");
+    localStorage.setItem("dartsFreezeScreen", "true");
+  }
+}
+
+// On load, read freeze screen state
+window.addEventListener("load", () => {
+  const freeze = localStorage.getItem("dartsFreezeScreen");
+  if (freeze === "true") {
+    document.getElementById("freezeOverlay").classList.add("visible");
+  }
+  renderPlayerList();
+  document.getElementById("tournamentMode").addEventListener("change", renderPlayerList);
 });
-
-// Initial load
-if (localStorage.getItem('darts_logo') === 'on') {
-  document.getElementById('logoToggle').classList.add('on');
-  document.getElementById('logoToggle').innerText = 'Logo ON';
-}
-sync();
 </script>
+
 </body>
 </html>
