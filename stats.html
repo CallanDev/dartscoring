@@ -6,122 +6,87 @@
 <title>Darts Stats</title>
 <style>
 body {
-  background: #111;
-  color: #eee;
-  font-family: 'Arial', sans-serif;
-  margin: 0; padding: 20px;
+  background-color: #121212;
+  color: #ffcc00;
+  font-family: 'Arial Black', Arial, sans-serif;
+  padding: 30px;
+  user-select: none;
+  min-height: 100vh;
 }
 h1 {
-  color: #ffcc00;
   text-align: center;
+  font-size: 3rem;
+  margin-bottom: 30px;
+  text-shadow: 0 0 10px #ffcc00;
 }
-table {
-  width: 100%;
-  border-collapse: collapse;
-  margin-top: 15px;
-  background: #222;
+#leaderboard {
+  max-width: 600px;
+  margin: 0 auto;
+  background: #222200cc;
+  border: 2px solid #ffcc00;
+  border-radius: 12px;
+  padding: 20px;
 }
-th, td {
-  padding: 10px;
-  border: 1px solid #333;
-  text-align: center;
+#leaderboard ol {
+  font-size: 1.4rem;
+  padding-left: 25px;
 }
-th {
-  background: #444;
-  color: #ffcc00;
+#leaderboard li {
+  margin-bottom: 10px;
+  display: flex;
+  justify-content: space-between;
+  border-bottom: 1px solid #ffcc00;
+  padding-bottom: 5px;
 }
-img.player-pic {
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  object-fit: cover;
+.playerName {
+  font-weight: 700;
+}
+.playerStats {
+  font-weight: 400;
+  font-size: 1.2rem;
 }
 </style>
 </head>
 <body>
-
-<h1>Darts Tournament Stats</h1>
-
-<table id="statsTable">
-  <thead>
-    <tr>
-      <th>Rank</th>
-      <th>Player</th>
-      <th>Avg Score</th>
-      <th>Games Played</th>
-      <th>Wins</th>
-      <th>Losses</th>
-      <th>Win %</th>
-      <th>Lose %</th>
-    </tr>
-  </thead>
-  <tbody></tbody>
-</table>
+<h1>Final Placements & Stats</h1>
+<div id="leaderboard">
+  <ol id="placementList">
+    <li>Loading final results...</li>
+  </ol>
+</div>
 
 <script>
-let players = [];
-let playerPics = {};
-let stats = {}; // stats per player: {games: x, wins: y, losses: z, totalScore: n}
+function loadFinalResults() {
+  const placementsRaw = localStorage.getItem("darts_final_results");
+  const statsRaw = localStorage.getItem("darts_player_stats");
 
-function loadStats() {
-  players = JSON.parse(localStorage.getItem("dartsPlayers") || "[]");
-  playerPics = JSON.parse(localStorage.getItem("dartsPlayerPics") || "{}");
-  stats = JSON.parse(localStorage.getItem("dartsPlayerStats") || "{}");
+  if (!placementsRaw) {
+    document.getElementById("placementList").innerHTML = "<li>No final results found.</li>";
+    return;
+  }
 
-  // Ensure stats for all players
-  players.forEach(p => {
-    if (!stats[p]) {
-      stats[p] = { games: 0, wins: 0, losses: 0, totalScore: 0 };
-    }
+  const placements = JSON.parse(placementsRaw);
+  const stats = statsRaw ? JSON.parse(statsRaw) : {};
+
+  const listEl = document.getElementById("placementList");
+  listEl.innerHTML = "";
+
+  placements.forEach((player, index) => {
+    const stat = stats[player];
+    const avg = stat && stat.average ? stat.average : "N/A";
+    const score = stat && stat.score ? stat.score : "-";
+
+    const li = document.createElement("li");
+    li.innerHTML = `
+      <span class="playerName">${index + 1}. ${player}</span>
+      <span class="playerStats">Final Score: ${score} | Average: ${avg}</span>
+    `;
+    listEl.appendChild(li);
   });
 }
 
-function calculateAverages() {
-  players.forEach(p => {
-    const s = stats[p];
-    s.avg = s.games > 0 ? (s.totalScore / s.games).toFixed(2) : "0.00";
-    s.winPercent = s.games > 0 ? ((s.wins / s.games) * 100).toFixed(1) : "0.0";
-    s.losePercent = s.games > 0 ? ((s.losses / s.games) * 100).toFixed(1) : "0.0";
-  });
-}
-
-function renderStats() {
-  const tbody = document.querySelector("#statsTable tbody");
-  calculateAverages();
-
-  // Sort by avg score descending
-  const sorted = [...players].sort((a, b) => (stats[b].avg - stats[a].avg));
-
-  tbody.innerHTML = sorted.map((p, idx) => {
-    const s = stats[p];
-    const pic = playerPics[p] || "assets/default_player.png";
-    return `<tr>
-      <td>${idx + 1}</td>
-      <td style="text-align:left;">
-        <img class="player-pic" src="${pic}" alt="${p}" />
-        &nbsp;${p}
-      </td>
-      <td>${s.avg}</td>
-      <td>${s.games}</td>
-      <td>${s.wins}</td>
-      <td>${s.losses}</td>
-      <td>${s.winPercent}%</td>
-      <td>${s.losePercent}%</td>
-    </tr>`;
-  }).join("");
-}
-
-function refresh() {
-  loadStats();
-  renderStats();
-}
-
-window.addEventListener("load", () => {
-  refresh();
-  setInterval(refresh, 5000); // Refresh every 5 seconds
-});
+window.onload = loadFinalResults;
 </script>
-
 </body>
 </html>
 
