@@ -9,17 +9,6 @@ body {
   font-family: 'Arial', sans-serif;
   background-color: #1a1a1a;
   color: #fff;
-  margin: 0;<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Darts Admin</title>
-<style>
-body {
-  font-family: 'Arial', sans-serif;
-  background-color: #1a1a1a;
-  color: #fff;
   margin: 0;
   padding: 20px;
 }
@@ -60,50 +49,6 @@ input.throw-input {
   text-align: center;
   margin-right: 10px;
 }
-input#totalScore {
-  width: 70px;
-  text-align: center;
-  margin-left: 10px;
-  background-color: #444;
-  color: #ccc;
-  border: none;
-  font-weight: bold;
-  user-select: none;
-}
-.player-photo-preview {
-  height: 50px;
-  width: 50px;
-  border-radius: 50%;
-  object-fit: cover;
-  border: 2px solid #ffcc00;
-  margin-left: 10px;
-  vertical-align: middle;
-}
-button#freezeBtn {
-  background: #aa0000;
-  color: white;
-  font-weight: bold;
-  margin-top: 15px;
-  cursor: pointer;
-  padding: 10px 15px;
-  border: none;
-  border-radius: 5px;
-}
-.timer {
-  font-size: 1.5rem;
-  font-weight: bold;
-  color: #ffcc00;
-  margin-top: 10px;
-}
-.break-logo {
-  font-size: 5rem;
-  font-weight: 900;
-  text-align: center;
-  margin-top: 30px;
-  user-select: none;
-}
-.break-logo .dart { color: red; }
-.break-logo .score { color: white; font-style: italic; }
 </style>
 </head>
 <body>
@@ -124,18 +69,9 @@ button#freezeBtn {
   <label>Tournament Mode:</label>
   <input type="checkbox" id="tournamentMode" />
 
-  <br />
-  <label>Auto Assign Matches:</label>
-  <input type="checkbox" id="autoAssign" checked />
-
-  <br />
-  <label>Turn Timer (seconds, 0=off):</label>
-  <input type="number" id="turnTimer" min="0" max="60" value="0" />
-
   <div class="section">
     <label>Add Player:</label>
-    <input type="text" id="playerName" placeholder="Player name" />
-    <input type="file" id="playerPhotoInput" accept="image/*" style="vertical-align:middle;" />
+    <input type="text" id="playerName" />
     <button onclick="addPlayer()">Add</button>
   </div>
 
@@ -144,12 +80,6 @@ button#freezeBtn {
   <div id="tournamentMatches" class="match-selectors hidden"></div>
 
   <button onclick="startGame()">Start Game</button>
-  <button id="freezeBtn" onclick="toggleFreeze()">FREEZE SCREEN</button>
-</div>
-
-<div id="breakSection" class="hidden">
-  <div class="break-logo"><span class="dart">dart</span><span class="score">Score</span></div>
-  <div class="timer" id="breakTimer"></div>
 </div>
 
 <form id="scoreForm" class="score-input hidden" onsubmit="event.preventDefault(); submitScore();">
@@ -163,17 +93,14 @@ button#freezeBtn {
   <input type="number" id="throw2" class="throw-input" min="0" max="180" required />
   <label class="throw-label" for="throw3">Throw 3:</label>
   <input type="number" id="throw3" class="throw-input" min="0" max="180" required />
-  <label class="throw-label" for="totalScore">Total:</label>
-  <input type="number" id="totalScore" readonly value="0" />
   <br />
   <button type="submit">Submit</button>
-  <div id="turnTimerDisplay" class="timer"></div>
 </form>
 
 <div class="log" id="log"></div>
 
 <script>
-let players = []; // { name, photo (base64 string) }
+let players = [];
 let scores = {};
 let currentPlayerIndex = 0;
 let gameMode = 501;
@@ -185,55 +112,41 @@ let matchScores = {};
 let matchWinners = [];
 let matchLosers = [];
 
-let breakTimeout = null;
-let breakDuration = 120; // seconds
-let breakInterval = null;
-
-let freezeActive = false;
-let turnTimerSeconds = 0;
-let turnTimerInterval = null;
-let turnTimerRemaining = 0;
+// Load players and stats from localStorage on start
+function loadPlayersAndStats() {
+  const storedPlayers = JSON.parse(localStorage.getItem('darts_players'));
+  if (storedPlayers) {
+    players = storedPlayers;
+  }
+}
+function savePlayers() {
+  localStorage.setItem('darts_players', JSON.stringify(players));
+}
 
 // Add a new player
 function addPlayer() {
-  const nameInput = document.getElementById("playerName");
-  const photoInput = document.getElementById("playerPhotoInput");
-  const name = nameInput.value.trim();
-  if (!name || players.find(p => p.name === name)) {
-    alert("Enter unique player name.");
-    return;
-  }
-
-  if (photoInput.files.length === 0) {
-    alert("Please select a photo.");
-    return;
-  }
-
-  const file = photoInput.files[0];
-  const reader = new FileReader();
-  reader.onload = function(e) {
-    players.push({ name, photo: e.target.result });
-    nameInput.value = "";
-    photoInput.value = "";
-    renderPlayerList();
-  };
-  reader.readAsDataURL(file);
+  const input = document.getElementById("playerName");
+  const name = input.value.trim();
+  if (!name || players.includes(name)) return alert("Invalid or duplicate player.");
+  players.push(name);
+  savePlayers();
+  input.value = "";
+  renderPlayerList();
 }
 
-// Show the list of players with photos
+// Show the list of players
 function renderPlayerList() {
   const list = document.getElementById("playerList");
-  list.innerHTML = players.map(p =>
-    `<li>
-      <img class="player-photo-preview" src="${p.photo}" alt="${p.name}" title="${p.name}" />
-      ${p.name}
-    </li>`
-  ).join("");
+  if(players.length === 0) {
+    list.innerHTML = "<li><em>No players added yet.</em></li>";
+  } else {
+    list.innerHTML = players.map((p) => `<li>${p}</li>`).join("");
+  }
 
   if (
     document.getElementById("tournamentMode").checked &&
     players.length >= 2 &&
-    players.length <= 12
+    players.length <= 6
   ) {
     renderTournamentSelectors();
   } else {
@@ -249,16 +162,16 @@ function renderTournamentSelectors() {
 
   for (let i = 0; i < matchCount; i++) {
     container.innerHTML += `
-    <div style="margin-bottom:10px;">
+      <div style="margin-bottom:10px;">
       Match ${i + 1}:
       <select id="match_${i}_p1">${players
-        .map((p) => `<option value="${p.name}">${p.name}</option>`)
+        .map((p) => `<option value="${p}">${p}</option>`)
         .join("")}</select>
       vs
       <select id="match_${i}_p2">${players
-        .map((p) => `<option value="${p.name}">${p.name}</option>`)
+        .map((p) => `<option value="${p}">${p}</option>`)
         .join("")}</select>
-    </div>
+      </div>
     `;
   }
 
@@ -269,7 +182,6 @@ function renderTournamentSelectors() {
 function startGame() {
   gameMode = parseInt(document.getElementById("gameMode").value);
   isTournament = document.getElementById("tournamentMode").checked;
-  turnTimerSeconds = parseInt(document.getElementById("turnTimer").value) || 0;
 
   if (players.length < 2) {
     alert("You need at least 2 players to start.");
@@ -279,337 +191,229 @@ function startGame() {
     const matchCount = Math.floor(players.length / 2);
     tournamentMatches = [];
 
-    if (document.getElementById("autoAssign").checked) {
-      // Auto assign matches randomly
-      let shuffled = [...players];
-      shuffled = shuffled.sort(() => Math.random() - 0.5);
-      for (let i = 0; i < matchCount; i++) {
-        tournamentMatches.push([shuffled[i*2].name, shuffled[i*2+1].name]);
+    const usedPlayers = new Set();
+    for (let i = 0; i < matchCount; i++) {
+      const p1 = document.getElementById(`match_${i}_p1`).value;
+      const p2 = document.getElementById(`match_${i}_p2`).value;
+
+      if (p1 === p2) {
+        alert("A player cannot play against themselves.");
+        return;
       }
-    } else {
-      // Manual assignment
-      const usedPlayers = new Set();
-      for (let i = 0; i < matchCount; i++) {
-        const p1 = document.getElementById(`match_${i}_p1`).value;
-        const p2 = document.getElementById(`match_${i}_p2`).value;
-
-        if (p1 === p2) {
-          alert(`Match ${i+1} players cannot be the same.`);
-          return;
-        }
-        if (usedPlayers.has(p1) || usedPlayers.has(p2)) {
-          alert(`Player assigned more than once.`);
-          return;
-        }
-        usedPlayers.add(p1);
-        usedPlayers.add(p2);
-        tournamentMatches.push([p1, p2]);
+      if (usedPlayers.has(p1) || usedPlayers.has(p2)) {
+        alert("Players cannot be in multiple matches.");
+        return;
       }
-    }
 
-    currentMatchIndex = 0;
-    matchScores = {};
-    matchWinners = [];
-    matchLosers = [];
-
-    for (const match of tournamentMatches) {
-      matchScores[match[0]] = gameMode;
-      matchScores[match[1]] = gameMode;
+      tournamentMatches.push([p1, p2]);
+      usedPlayers.add(p1);
+      usedPlayers.add(p2);
     }
-    loadCurrentMatch();
   } else {
-    // Normal mode, only 2 players at a time (first two)
-    if (players.length > 2) {
-      alert("Non-tournament mode supports only 2 players.");
-      return;
-    }
-    scores = {};
-    for (const p of players) {
-      scores[p.name] = gameMode;
-    }
-    currentPlayerIndex = 0;
-    showScoreForm(players[0].name);
+    tournamentMatches = [players];
   }
+
+  // Initialize scores for all players
+  scores = {};
+  for (const p of players) {
+    scores[p] = { score: gameMode, history: [], average: 0 };
+  }
+
+  currentMatchIndex = 0;
+  matchWinners = [];
+  matchLosers = [];
 
   document.getElementById("setupSection").classList.add("hidden");
   document.getElementById("scoreForm").classList.remove("hidden");
-  saveState();
-  log("Game started.");
+  startMatch();
 }
 
-function loadCurrentMatch() {
-  if (currentMatchIndex >= tournamentMatches.length) {
-    // All matches finished, start break or show final stats
-    startBreak();
-    return;
-  }
+// Start current match
+function startMatch() {
   const match = tournamentMatches[currentMatchIndex];
-  matchScores[match[0]] = gameMode;
-  matchScores[match[1]] = gameMode;
   currentPlayerIndex = 0;
-  showScoreForm(match[0]);
-  updateMatchTitle();
+  matchScores = {};
+  for (const p of match) {
+    scores[p].score = gameMode;
+    scores[p].history = [];
+    scores[p].average = 0;
+    matchScores[p] = scores[p];
+  }
+
+  document.getElementById("matchTitle").textContent = `Match: ${match[0]} vs ${match[1]}`;
+  updateCurrentTurn();
+  syncToStorage();
+  log(`Match started: ${match[0]} vs ${match[1]}`);
 }
 
-function updateMatchTitle() {
+// Update current player's turn display
+function updateCurrentTurn() {
   const match = tournamentMatches[currentMatchIndex];
-  document.getElementById("matchTitle").textContent = `Match ${currentMatchIndex + 1}: ${match[0]} vs ${match[1]}`;
+  const player = match[currentPlayerIndex];
+  const playerScore = matchScores[player].score;
+  document.getElementById("currentTurn").textContent = `Current Player: ${player} (Score: ${playerScore})`;
+  // Focus first throw input on turn change
+  document.getElementById("throw1").focus();
 }
 
-function showScoreForm(playerName) {
-  const player = players.find(p => p.name === playerName);
-  if (!player) return;
-  document.getElementById("currentTurn").innerHTML = `Turn: ${player.name} <img src="${player.photo}" class="player-photo-preview" alt="${player.name}">`;
+// Show popup on scoreboard by setting localStorage flag
+function showPopup(message) {
+  localStorage.setItem("darts_popup", JSON.stringify({ message, timestamp: Date.now() }));
+}
+
+// Submit score for current player
+function submitScore() {
+  const t1 = parseInt(document.getElementById("throw1").value) || 0;
+  const t2 = parseInt(document.getElementById("throw2").value) || 0;
+  const t3 = parseInt(document.getElementById("throw3").value) || 0;
+
+  // Clear inputs
   document.getElementById("throw1").value = "";
   document.getElementById("throw2").value = "";
   document.getElementById("throw3").value = "";
-  document.getElementById("totalScore").value = "0";
-  document.getElementById("throw1").focus();
 
-  if (turnTimerSeconds > 0) {
-    startTurnTimer();
-  } else {
-    document.getElementById("turnTimerDisplay").textContent = "";
+  const totalScore = t1 + t2 + t3;
+  if (totalScore < 0 || totalScore > 180) {
+    alert("Total score for 3 throws must be between 0 and 180.");
+    return;
   }
-}
 
-function startTurnTimer() {
-  clearInterval(turnTimerInterval);
-  turnTimerRemaining = turnTimerSeconds;
-  document.getElementById("turnTimerDisplay").textContent = `Time left: ${turnTimerRemaining}s`;
-  turnTimerInterval = setInterval(() => {
-    turnTimerRemaining--;
-    if (turnTimerRemaining <= 0) {
-      clearInterval(turnTimerInterval);
-      document.getElementById("turnTimerDisplay").textContent = "Turn timed out! Auto-submitting...";
-      autoSubmitTurn();
-    } else {
-      document.getElementById("turnTimerDisplay").textContent = `Time left: ${turnTimerRemaining}s`;
-    }
-  }, 1000);
-}
-
-function autoSubmitTurn() {
-  // Submit whatever score input is present, treat empty as 0
-  const t1 = parseInt(document.getElementById("throw1").value) || 0;
-  const t2 = parseInt(document.getElementById("throw2").value) || 0;
-  const t3 = parseInt(document.getElementById("throw3").value) || 0;
-  document.getElementById("throw1").value = t1;
-  document.getElementById("throw2").value = t2;
-  document.getElementById("throw3").value = t3;
-  submitScore();
-}
-
-document.getElementById("throw1").addEventListener("input", updateTotal);
-document.getElementById("throw2").addEventListener("input", updateTotal);
-document.getElementById("throw3").addEventListener("input", updateTotal);
-
-function updateTotal() {
-  const t1 = parseInt(document.getElementById("throw1").value) || 0;
-  const t2 = parseInt(document.getElementById("throw2").value) || 0;
-  const t3 = parseInt(document.getElementById("throw3").value) || 0;
-  document.getElementById("totalScore").value = t1 + t2 + t3;
-}
-
-function submitScore() {
-  clearInterval(turnTimerInterval);
   const match = tournamentMatches[currentMatchIndex];
-  const p1 = match ? match[0] : players[0].name;
-  const p2 = match ? match[1] : players[1]?.name;
+  const player = match[currentPlayerIndex];
+  const newScore = matchScores[player].score - totalScore;
 
-  let currentPlayer = isTournament ? (currentPlayerIndex === 0 ? p1 : p2) : players[currentPlayerIndex].name;
-  let opponentPlayer = isTournament ? (currentPlayerIndex === 0 ? p2 : p1) : players[(currentPlayerIndex + 1) % 2].name;
+  showPopup(`${player} scored ${totalScore}!`);
 
-  const throw1 = parseInt(document.getElementById("throw1").value) || 0;
-  const throw2 = parseInt(document.getElementById("throw2").value) || 0;
-  const throw3 = parseInt(document.getElementById("throw3").value) || 0;
-  const total = throw1 + throw2 + throw3;
+  if (newScore < 0) {
+    log(`${player} busts with ${totalScore}! Score remains ${matchScores[player].score}`);
+    // Bust - score doesn't change, switch turn
+  } else {
+    matchScores[player].score = newScore;
+    matchScores[player].history.push(totalScore);
+    const totalThrows = matchScores[player].history.reduce((a, b) => a + b, 0);
+    matchScores[player].average = (totalThrows / matchScores[player].history.length).toFixed(2);
 
-  if (total > (isTournament ? matchScores[currentPlayer] : scores[currentPlayer])) {
-    alert("Score cannot be more than remaining.");
-    return;
-  }
+    log(`${player} scored ${totalScore}, new score: ${newScore}`);
 
-  let remaining = (isTournament ? matchScores[currentPlayer] : scores[currentPlayer]) - total;
+    if (newScore === 0) {
+      log(`${player} wins the match!`);
+      showPopup(`${player} wins the match! 🏆`);
 
-  if (remaining === 0) {
-    // Player won the match
-    log(`${currentPlayer} wins!`);
-    if (isTournament) {
-      matchWinners.push(currentPlayer);
-      matchLosers.push(opponentPlayer);
+      // Update stats
+      updateStats(player, true);
+      matchWinners.push(player);
+      matchLosers.push(match.find((p) => p !== player));
+
       currentMatchIndex++;
-      if (currentMatchIndex < tournamentMatches.length) {
-        loadCurrentMatch();
+      if (currentMatchIndex >= tournamentMatches.length) {
+        saveFinalResults();
+        return;
       } else {
-        startBreak();
+        startMatch();
+        return;
       }
-      saveState();
-      return;
-    } else {
-      log("Game finished.");
-      document.getElementById("scoreForm").classList.add("hidden");
-      return;
     }
-  } else if (remaining < 0) {
-    alert("Score overshot remaining. Try again.");
-    return;
   }
 
-  if (isTournament) {
-    matchScores[currentPlayer] = remaining;
-  } else {
-    scores[currentPlayer] = remaining;
-  }
-
-  // Switch turn
-  if (isTournament) {
-    currentPlayerIndex = (currentPlayerIndex + 1) % 2;
-    showScoreForm(currentPlayerIndex === 0 ? p1 : p2);
-  } else {
-    currentPlayerIndex = (currentPlayerIndex + 1) % players.length;
-    showScoreForm(players[currentPlayerIndex].name);
-  }
-  saveState();
+  // Next player's turn
+  currentPlayerIndex = (currentPlayerIndex + 1) % 2;
+  updateCurrentTurn();
+  syncToStorage();
 }
 
-function log(msg) {
-  const logDiv = document.getElementById("log");
-  logDiv.innerHTML = `${new Date().toLocaleTimeString()}: ${msg}<br />` + logDiv.innerHTML;
+// Save stats to localStorage for player wins and games
+function updateStats(winner, isWin) {
+  const stats = JSON.parse(localStorage.getItem("darts_stats")) || {};
+  players.forEach(p => {
+    if (!stats[p]) stats[p] = { gamesPlayed: 0, wins: 0, totalScore: 0, throwsCount: 0 };
+  });
+
+  // Increase games played for both players in current match
+  const match = tournamentMatches[currentMatchIndex];
+  if(match) {
+    match.forEach(p => {
+      stats[p].gamesPlayed += 1;
+    });
+  }
+
+  if(isWin) {
+    stats[winner].wins += 1;
+  }
+
+  // Also add scores for averages:
+  const currentScores = matchScores;
+  Object.entries(currentScores).forEach(([player, s]) => {
+    const totalThrows = s.history.reduce((a,b) => a+b, 0);
+    const throwsCount = s.history.length;
+    stats[player].totalScore += totalThrows;
+    stats[player].throwsCount += throwsCount;
+  });
+
+  localStorage.setItem("darts_stats", JSON.stringify(stats));
 }
 
-// Break section display and timer
-function startBreak() {
+// Save game state to localStorage for scoreboard
+function syncToStorage() {
+  localStorage.setItem(
+    "darts_game",
+    JSON.stringify({
+      mode: gameMode,
+      players: tournamentMatches[currentMatchIndex],
+      scores: matchScores,
+      currentPlayerIndex,
+      isTournament,
+      tournamentState: {
+        matchIndex: currentMatchIndex,
+        fullMatches: tournamentMatches,
+        winners: matchWinners,
+        losers: matchLosers,
+      },
+    })
+  );
+}
+
+// Save final tournament placements and clear game state
+function saveFinalResults() {
+  // Arrange final placements: winners first, then losers, then anyone not in matches (odd players)
+  const remaining = players.filter(
+    (p) => !matchWinners.includes(p) && !matchLosers.includes(p)
+  );
+  const placements = [...matchWinners, ...matchLosers, ...remaining];
+
+  localStorage.removeItem("darts_game");
+  localStorage.setItem("darts_final_results", JSON.stringify(placements));
+  showPopup(`Tournament Complete! 🏁`);
+
   document.getElementById("scoreForm").classList.add("hidden");
-  document.getElementById("breakSection").classList.remove("hidden");
-  let secondsLeft = breakDuration;
-  document.getElementById("breakTimer").textContent = `Break time: ${secondsLeft}s`;
-  breakInterval = setInterval(() => {
-    secondsLeft--;
-    document.getElementById("breakTimer").textContent = `Break time: ${secondsLeft}s`;
-    if (secondsLeft <= 0) {
-      clearInterval(breakInterval);
-      document.getElementById("breakSection").classList.add("hidden");
-      // Restart next round or finish tournament
-      if (matchLosers.length > 1) {
-        // Advance tournament with winners/losers for next round
-        setupNextTournamentRound();
-      } else {
-        log("Tournament finished.");
-        alert("Tournament finished!");
-        // Reset or stop game here if needed
-      }
-    }
-  }, 1000);
+  document.getElementById("setupSection").classList.remove("hidden");
+  log("Tournament complete! Final results saved.");
 }
 
-// Setup next round matches for tournament
-function setupNextTournamentRound() {
-  // Simplified: Just pair winners for next round
-  tournamentMatches = [];
-  const nextRoundPlayers = [...matchWinners];
-  matchWinners = [];
-  matchLosers = [];
-  currentMatchIndex = 0;
-  if (nextRoundPlayers.length < 2) {
-    alert("Tournament complete! Winner: " + nextRoundPlayers[0]);
-    document.getElementById("setupSection").classList.remove("hidden");
-    return;
-  }
-  for (let i = 0; i < nextRoundPlayers.length; i += 2) {
-    if (i + 1 < nextRoundPlayers.length) {
-      tournamentMatches.push([nextRoundPlayers[i], nextRoundPlayers[i+1]]);
-      matchScores[nextRoundPlayers[i]] = gameMode;
-      matchScores[nextRoundPlayers[i+1]] = gameMode;
-    } else {
-      // Odd player advances automatically
-      matchWinners.push(nextRoundPlayers[i]);
-    }
-  }
-  loadCurrentMatch();
-  document.getElementById("breakSection").classList.add("hidden");
-  document.getElementById("scoreForm").classList.remove("hidden");
+// Simple log for admin UI
+function log(message) {
+  const logEl = document.getElementById("log");
+  logEl.innerHTML += `<div>${new Date().toLocaleTimeString()}: ${message}</div>`;
+  logEl.scrollTop = logEl.scrollHeight;
 }
 
-// Freeze screen toggle
-function toggleFreeze() {
-  freezeActive = !freezeActive;
-  if (freezeActive) {
-    // Save freeze state
-    localStorage.setItem("freezeActive", "true");
-    alert("Freeze screen ON");
-  } else {
-    localStorage.removeItem("freezeActive");
-    alert("Freeze screen OFF");
-  }
-  // Notify scoreboard
-  localStorage.setItem("freezeToggle", Date.now());
-}
-
-// Save current game state in localStorage
-function saveState() {
-  const state = {
-    players,
-    gameMode,
-    isTournament,
-    tournamentMatches,
-    currentMatchIndex,
-    matchScores,
-    scores,
-    currentPlayerIndex,
-    matchWinners,
-    matchLosers,
-    turnTimerSeconds,
-    freezeActive
-  };
-  localStorage.setItem("dartGameState", JSON.stringify(state));
-}
-
-// Load game state from localStorage
-function loadState() {
-  const stateStr = localStorage.getItem("dartGameState");
-  if (!stateStr) return;
-  const state = JSON.parse(stateStr);
-  players = state.players || [];
-  gameMode = state.gameMode || 501;
-  isTournament = state.isTournament || false;
-  tournamentMatches = state.tournamentMatches || [];
-  currentMatchIndex = state.currentMatchIndex || 0;
-  matchScores = state.matchScores || {};
-  scores = state.scores || {};
-  currentPlayerIndex = state.currentPlayerIndex || 0;
-  matchWinners = state.matchWinners || [];
-  matchLosers = state.matchLosers || [];
-  turnTimerSeconds = state.turnTimerSeconds || 0;
-  freezeActive = state.freezeActive || false;
+// Initial render for players and tournament assignment UI
+document.getElementById("tournamentMode").addEventListener("change", () => {
   renderPlayerList();
-  if (freezeActive) {
-    document.getElementById("freezeBtn").textContent = "UNFREEZE SCREEN";
-  }
-  if (isTournament && tournamentMatches.length > 0) {
-    loadCurrentMatch();
-  } else if (players.length >= 2) {
-    showScoreForm(players[currentPlayerIndex].name);
-  }
-  document.getElementById("setupSection").classList.add("hidden");
-  document.getElementById("scoreForm").classList.remove("hidden");
-}
+});
 
-// Listen for freeze toggle from localStorage changes (for scoreboard)
-window.addEventListener("storage", (e) => {
-  if (e.key === "freezeToggle") {
-    freezeActive = localStorage.getItem("freezeActive") === "true";
-    if (freezeActive) {
-      alert("Freeze screen activated (Admin).");
-    } else {
-      alert("Freeze screen deactivated (Admin).");
+// Submit on enter key on score inputs
+["throw1", "throw2", "throw3"].forEach((id) => {
+  document.getElementById(id).addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      submitScore();
     }
-  }
+  });
 });
 
 // Initial load
-loadState();
-
+loadPlayersAndStats();
+renderPlayerList();
 </script>
 </body>
 </html>
