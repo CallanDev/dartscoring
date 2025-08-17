@@ -5,118 +5,102 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Darts Admin</title>
 <style>
-body {
-  font-family: 'Arial', sans-serif;
-  background-color: #1a1a1a;
-  color: #fff;
-  margin: 0;
-  padding: 20px;
-}
-h1, h2 {
-  color: #ffcc00;
-}
-input, select, button {
-  padding: 8px;
-  margin: 5px 0;
-  font-size: 1rem;
-}
-.section {
-  margin-top: 20px;
-}
-.hidden {
-  display: none;
-}
-.match-selectors {
-  margin-top: 10px;
-}
-.score-input {
-  margin-top: 20px;
-}
-.log {
-  margin-top: 20px;
-  max-height: 150px;
-  overflow-y: auto;
-  background: #222;
-  padding: 10px;
-  font-size: 0.9rem;
-}
-label.throw-label {
-  display: inline-block;
-  width: 70px;
-}
-input.throw-input {
-  width: 50px;
-  text-align: center;
-  margin-right: 10px;
-}
-/* Player pic popup */
-#playerPicPopup {
-  position: fixed;
-  top: 50%; left: 50%;
-  transform: translate(-50%, -50%);
-  background: #222;
-  border: 2px solid #ffcc00;
-  padding: 20px;
-  z-index: 10000;
-  width: 350px;
-}
-#playerPicPopup.hidden {
-  display: none;
-}
-#playerPicPopup h3 {
-  margin-top: 0;
-}
-#playerPicPopup input[type=text] {
-  width: 100%;
-  padding: 6px;
-  font-size: 1rem;
-}
-#playerPicPopup button {
-  margin-right: 10px;
-}
-/* Freeze overlay */
-#freezeOverlay {
-  position: fixed;
-  top: 0; left: 0; right: 0; bottom: 0;
-  background: rgba(0,0,0,0.95);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.5s ease;
-  z-index: 100000;
-}
-#freezeOverlay.visible {
-  opacity: 1;
-  pointer-events: all;
-}
-#freezeOverlay img {
-  max-width: 70vw;
-  max-height: 70vh;
-  object-fit: contain;
-  filter: drop-shadow(0 0 10px #ffcc00);
-}
-/* Round timer display */
-#roundTimer {
-  font-weight: bold;
-  font-size: 1.2rem;
-  margin-top: 10px;
-  color: #ffcc00;
-}
-/* Player list with pics */
-#playerList li {
-  margin-bottom: 6px;
-  display: flex;
-  align-items: center;
-}
-#playerList img {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  margin-right: 8px;
-  object-fit: cover;
-}
+  body {
+    font-family: Arial, sans-serif;
+    background: #121212;
+    color: #eee;
+    margin: 20px;
+  }
+  h1, h2 {
+    color: #ffcc00;
+  }
+  input, select, button {
+    padding: 8px;
+    margin: 5px 0;
+    font-size: 1rem;
+    border-radius: 6px;
+    border: none;
+    outline: none;
+  }
+  input[type="text"] {
+    width: 200px;
+  }
+  button {
+    background-color: #ffcc00;
+    color: #121212;
+    cursor: pointer;
+    font-weight: bold;
+  }
+  button:hover {
+    background-color: #e6b800;
+  }
+  .section {
+    margin-bottom: 20px;
+  }
+  #playerList li {
+    display: flex;
+    align-items: center;
+    margin-bottom: 5px;
+  }
+  #playerList img {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    margin-right: 10px;
+    object-fit: cover;
+    border: 2px solid #ffcc00;
+  }
+  /* Camera popup styles */
+  #cameraPopup {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.85);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 10000;
+    visibility: hidden;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+  }
+  #cameraPopup.visible {
+    visibility: visible;
+    opacity: 1;
+  }
+  #cameraContainer {
+    background: #222;
+    border: 3px solid #ffcc00;
+    padding: 20px;
+    border-radius: 12px;
+    text-align: center;
+    max-width: 400px;
+  }
+  #videoElement {
+    width: 320px;
+    height: 240px;
+    background: #000;
+    border-radius: 8px;
+  }
+  #captureButton, #cancelCaptureButton {
+    margin: 10px;
+    padding: 10px 15px;
+    font-size: 1rem;
+    cursor: pointer;
+  }
+  #snapshotPreview {
+    margin-top: 10px;
+    max-width: 320px;
+    border-radius: 8px;
+    display: none;
+  }
+
+  /* Freeze toggle button styling */
+  #freezeToggleBtn {
+    padding: 10px 20px;
+    font-weight: bold;
+    border: none;
+    border-radius: 6px;
+  }
 </style>
 </head>
 <body>
@@ -132,37 +116,39 @@ input.throw-input {
     <option value="501" selected>501</option>
     <option value="701">701</option>
   </select>
-
   <br />
 
   <label>Tournament Mode:</label>
   <input type="checkbox" id="tournamentMode" />
 
-  <br />
-
-  <label>Enable Round Time Limit:</label>
-  <input type="checkbox" id="enableRoundTimer" />
-  
-  <label for="roundTimeLimit">Time Limit per Round (seconds):</label>
-  <input type="number" id="roundTimeLimit" min="10" max="300" value="60" style="width: 80px;" />
-
-  <div class="section">
+  <div class="section" style="margin-top:15px;">
     <label>Add Player:</label>
-    <input type="text" id="playerName" />
-    <button onclick="addPlayer()">Add</button>
+    <input type="text" id="playerName" placeholder="Enter player name" autocomplete="off" />
+    <button id="addPlayerBtn">Add</button>
   </div>
 
-  <ul id="playerList"></ul>
+  <ul id="playerList"><li>No players added yet</li></ul>
 
-  <div id="tournamentMatches" class="match-selectors hidden"></div>
+  <div id="tournamentMatches" class="match-selectors hidden" style="margin-top:15px;"></div>
 
   <button onclick="startGame()">Start Game</button>
 
-  <button onclick="toggleFreezeScreen()">FREEZE SCREEN</button>
+  <button id="freezeToggleBtn" onclick="toggleFreezeScreen()" style="margin-top: 20px; background-color:#c0392b; color:#fff;">FREEZE SCREEN OFF</button>
 </div>
 
-<div id="roundTimer" class="hidden"></div>
+<!-- Camera Popup -->
+<div id="cameraPopup">
+  <div id="cameraContainer">
+    <video id="videoElement" autoplay playsinline></video>
+    <canvas id="snapshotCanvas" style="display:none;"></canvas>
+    <img id="snapshotPreview" alt="Snapshot Preview" />
+    <br />
+    <button id="captureButton">Capture</button>
+    <button id="cancelCaptureButton">Cancel</button>
+  </div>
+</div>
 
+<!-- Score form -->
 <form id="scoreForm" class="score-input hidden" onsubmit="event.preventDefault(); submitScore();">
   <h2>Enter Score</h2>
   <div id="matchTitle" style="font-weight:bold; font-size:1.2rem; margin-bottom:5px;"></div>
@@ -178,204 +164,323 @@ input.throw-input {
   <button type="submit">Submit</button>
 </form>
 
-<div class="log" id="log"></div>
-
-<!-- Player Picture Popup -->
-<div id="playerPicPopup" class="hidden">
-  <h3>Add Player Picture</h3>
-  <label>Player Name: <span id="popupPlayerName"></span></label><br/><br/>
-  <label>Picture URL or leave blank for default:</label><br/>
-  <input type="text" id="playerPicUrl" placeholder="https://example.com/image.png" />
-  <br/><br/>
-  <button onclick="confirmAddPlayer()">Confirm</button>
-  <button onclick="cancelAddPlayer()">Cancel</button>
-</div>
-
-<!-- Freeze Screen Overlay -->
-<div id="freezeOverlay" class="hidden">
-  <img src="assets/Logo.png" alt="Freeze Screen" />
-</div>
+<div class="log" id="log" style="margin-top:15px; height:150px; overflow-y:auto; background:#222; padding:10px; border-radius:8px;"></div>
 
 <script>
-let players = [];
-let playerPics = {}; // playerName => pic URL
-let scores = {};
-let currentPlayerIndex = 0;
-let gameMode = 501;
-let isTournament = false;
+  // State
+  let players = [];
+  let playerImages = {}; // { playerName: base64Image }
+  let scores = {};
+  let currentPlayerIndex = 0;
+  let gameMode = 501;
+  let isTournament = false;
 
-let tournamentMatches = [];
-let currentMatchIndex = 0;
-let matchScores = {};
-let matchWinners = [];
-let matchLosers = [];
-let roundNumber = 1;
-let totalRounds = 9;
+  let tournamentMatches = [];
+  let currentMatchIndex = 0;
+  let matchScores = {};
+  let matchWinners = [];
+  let matchLosers = [];
 
-let roundTimerEnabled = false;
-let roundTimeLimit = 60; // seconds
-let roundTimerInterval = null;
-let roundTimerRemaining = 0;
+  // Camera elements
+  const cameraPopup = document.getElementById("cameraPopup");
+  const video = document.getElementById("videoElement");
+  const canvas = document.getElementById("snapshotCanvas");
+  const snapshotPreview = document.getElementById("snapshotPreview");
+  const captureBtn = document.getElementById("captureButton");
+  const cancelBtn = document.getElementById("cancelCaptureButton");
+  let stream = null;
+  let capturedImage = null;
+  let newPlayerName = "";
 
-let pendingPlayerName = null;
+  // Open camera popup and start video stream
+  function openCamera(name) {
+    newPlayerName = name;
+    capturedImage = null;
+    snapshotPreview.style.display = "none";
+    captureBtn.textContent = "Capture";
+    video.style.display = "block";
+    video.play();
 
-function addPlayer() {
-  const input = document.getElementById("playerName");
-  const name = input.value.trim();
-  if (!name || players.includes(name)) return;
+    cameraPopup.classList.add("visible");
 
-  // Show picture popup
-  pendingPlayerName = name;
-  document.getElementById("popupPlayerName").textContent = name;
-  document.getElementById("playerPicUrl").value = "";
-  document.getElementById("playerPicPopup").classList.remove("hidden");
-}
-
-function confirmAddPlayer() {
-  const picUrl = document.getElementById("playerPicUrl").value.trim() || "assets/default_player.png";
-  players.push(pendingPlayerName);
-  playerPics[pendingPlayerName] = picUrl;
-  pendingPlayerName = null;
-  document.getElementById("playerPicPopup").classList.add("hidden");
-  document.getElementById("playerName").value = "";
-  renderPlayerList();
-}
-
-function cancelAddPlayer() {
-  pendingPlayerName = null;
-  document.getElementById("playerPicPopup").classList.add("hidden");
-}
-
-function renderPlayerList() {
-  const list = document.getElementById("playerList");
-  list.innerHTML = players.map(p => {
-    const pic = playerPics[p] || "assets/default_player.png";
-    return `<li><img src="${pic}" alt="${p}" />${p}</li>`;
-  }).join("");
-
-  if (
-    document.getElementById("tournamentMode").checked &&
-    players.length >= 2
-  ) {
-    renderTournamentSelectors();
-  } else {
-    document.getElementById("tournamentMatches").classList.add("hidden");
+    navigator.mediaDevices.getUserMedia({ video: true })
+      .then(s => {
+        stream = s;
+        video.srcObject = stream;
+      })
+      .catch(err => {
+        alert("Camera access denied or not available.");
+        cameraPopup.classList.remove("visible");
+      });
   }
-}
 
-// Automatically create tournament matches for rounds 1 to 9, players can play multiple times in rounds
-function createTournamentRounds() {
-  tournamentMatches = [];
-
-  // We'll generate rounds of matches:
-  // For simplicity, each round is a list of matches (each match is pair of players)
-  // Players can appear multiple times per round
-
-  // For demonstration, do random pairing each round:
-  for (let r = 1; r <= totalRounds; r++) {
-    const matchesInRound = [];
-
-    // Shuffle players
-    const shuffled = [...players].sort(() => Math.random() - 0.5);
-
-    // Pair players (if odd, last player gets a bye)
-    for (let i = 0; i < shuffled.length - 1; i += 2) {
-      matchesInRound.push([shuffled[i], shuffled[i + 1]]);
+  // Close camera popup and stop video stream
+  function closeCamera() {
+    cameraPopup.classList.remove("visible");
+    if (stream) {
+      stream.getTracks().forEach(track => track.stop());
+      stream = null;
     }
-    if (shuffled.length % 2 === 1) {
-      // Odd player no match this round, add single player match for bye (auto win)
-      matchesInRound.push([shuffled[shuffled.length - 1]]);
+  }
+
+  // Capture photo from video
+  captureBtn.addEventListener("click", () => {
+    if (!capturedImage) {
+      // Take snapshot
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      const ctx = canvas.getContext("2d");
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      capturedImage = canvas.toDataURL("image/png");
+      snapshotPreview.src = capturedImage;
+      snapshotPreview.style.display = "block";
+      captureBtn.textContent = "Confirm";
+      // Pause video preview and hide video
+      video.pause();
+      video.style.display = "none";
+    } else {
+      // Confirm and add player with image
+      players.push(newPlayerName);
+      playerImages[newPlayerName] = capturedImage;
+      renderPlayerList();
+      closeCamera();
+      document.getElementById("playerName").value = "";
+    }
+  });
+
+  cancelBtn.addEventListener("click", () => {
+    closeCamera();
+  });
+
+  // Add player button clicked - open camera popup instead of adding immediately
+  document.getElementById("addPlayerBtn").addEventListener("click", () => {
+    const input = document.getElementById("playerName");
+    const name = input.value.trim();
+    if (!name) {
+      alert("Please enter a player name.");
+      return;
+    }
+    if (players.includes(name)) {
+      alert("Player name already exists.");
+      return;
+    }
+    openCamera(name);
+  });
+
+  // Show the list of players with their images
+  function renderPlayerList() {
+    const list = document.getElementById("playerList");
+    if (players.length === 0) {
+      list.innerHTML = "<li>No players added yet</li>";
+      return;
+    }
+    list.innerHTML = players.map(p => {
+      const imgSrc = playerImages[p] || "";
+      const imgTag = imgSrc ? `<img src="${imgSrc}" alt="${p}"/>` : "";
+      return `<li>${imgTag}${p}</li>`;
+    }).join("");
+
+    if (
+      document.getElementById("tournamentMode").checked &&
+      players.length >= 2 &&
+      players.length <= 6
+    ) {
+      renderTournamentSelectors();
+    } else {
+      document.getElementById("tournamentMatches").classList.add("hidden");
+    }
+  }
+
+  // Tournament selector rendering (your original logic)
+  function renderTournamentSelectors() {
+    const container = document.getElementById("tournamentMatches");
+    container.innerHTML = "";
+    container.classList.remove("hidden");
+    const matchCount = Math.floor(players.length / 2);
+
+    for (let i = 0; i < matchCount; i++) {
+      const matchDiv = document.createElement("div");
+      matchDiv.style.marginBottom = "10px";
+
+      const p1select = document.createElement("select");
+      p1select.id = `match_${i}_p1`;
+      players.forEach(p => {
+        const opt = document.createElement("option");
+        opt.value = p;
+        opt.textContent = p;
+        p1select.appendChild(opt);
+      });
+
+      const p2select = document.createElement("select");
+      p2select.id = `match_${i}_p2`;
+      players.forEach(p => {
+        const opt = document.createElement("option");
+        opt.value = p;
+        opt.textContent = p;
+        p2select.appendChild(opt);
+      });
+
+      matchDiv.appendChild(document.createTextNode(`Match ${i + 1}: `));
+      matchDiv.appendChild(p1select);
+      matchDiv.appendChild(document.createTextNode(" vs "));
+      matchDiv.appendChild(p2select);
+
+      container.appendChild(matchDiv);
+    }
+  }
+
+  // Start the game
+  function startGame() {
+    gameMode = parseInt(document.getElementById("gameMode").value);
+    isTournament = document.getElementById("tournamentMode").checked;
+
+    if (players.length < 2) {
+      alert("You need at least 2 players to start.");
+      return;
     }
 
-    tournamentMatches.push(matchesInRound);
-  }
-}
+    if (isTournament) {
+      const matchCount = Math.floor(players.length / 2);
+      tournamentMatches = [];
 
-// Show dropdown selectors for manual tournament matches (only for round 1)
-function renderTournamentSelectors() {
-  const container = document.getElementById("tournamentMatches");
-  container.innerHTML = "<h3>Assign Matches for Round 1</h3>";
+      const usedPlayers = new Set();
+      for (let i = 0; i < matchCount; i++) {
+        const p1 = document.getElementById(`match_${i}_p1`).value;
+        const p2 = document.getElementById(`match_${i}_p2`).value;
 
-  const matchCount = Math.floor(players.length / 2);
+        if (p1 === p2) {
+          alert("A player cannot play against themselves.");
+          return;
+        }
+        if (usedPlayers.has(p1) || usedPlayers.has(p2)) {
+          alert("Players cannot be in multiple matches.");
+          return;
+        }
 
-  for (let i = 0; i < matchCount; i++) {
-    container.innerHTML += `
-    <div style="margin-bottom:10px;">
-    Match ${i + 1}:
-    <select id="match_0_p1">${players.map(p => `<option value="${p}">${p}</option>`).join("")}</select>
-    vs
-    <select id="match_0_p2">${players.map(p => `<option value="${p}">${p}</option>`).join("")}</select>
-    </div>`;
-  }
-  container.classList.remove("hidden");
-}
+        tournamentMatches.push([p1, p2]);
+        usedPlayers.add(p1);
+        usedPlayers.add(p2);
+      }
+    } else {
+      tournamentMatches = [players];
+    }
 
-let manualTournament = false;
-let manualMatches = []; // array of matches for round 1
+    // Initialize scores for all players
+    scores = {};
+    for (const p of players) {
+      scores[p] = { score: gameMode, history: [], average: 0 };
+    }
 
-function startGame() {
-  gameMode = parseInt(document.getElementById("gameMode").value);
-  isTournament = document.getElementById("tournamentMode").checked;
-  roundTimerEnabled = document.getElementById("enableRoundTimer").checked;
-  roundTimeLimit = parseInt(document.getElementById("roundTimeLimit").value) || 60;
-
-  if (players.length < 2) {
-    alert("Add at least 2 players.");
-    return;
-  }
-
-  // Save player pics & names to localStorage
-  localStorage.setItem("dartsPlayers", JSON.stringify(players));
-  localStorage.setItem("dartsPlayerPics", JSON.stringify(playerPics));
-  localStorage.setItem("dartsGameMode", gameMode);
-  localStorage.setItem("dartsTournament", isTournament);
-  localStorage.setItem("dartsRoundTimerEnabled", roundTimerEnabled);
-  localStorage.setItem("dartsRoundTimeLimit", roundTimeLimit);
-
-  if (isTournament) {
-    manualTournament = false;
-    createTournamentRounds();
     currentMatchIndex = 0;
-    roundNumber = 1;
-    localStorage.setItem("dartsTournamentMatches", JSON.stringify(tournamentMatches));
-    localStorage.setItem("dartsRoundNumber", roundNumber);
-  } else {
-    localStorage.removeItem("dartsTournamentMatches");
+    matchWinners = [];
+    matchLosers = [];
+
+    document.getElementById("setupSection").classList.add("hidden");
+    document.getElementById("scoreForm").classList.remove("hidden");
+    startMatch();
   }
 
-  // Initialize scores object (each player starts at gameMode)
-  scores = {};
-  players.forEach(p => (scores[p] = gameMode));
-  localStorage.setItem("dartsScores", JSON.stringify(scores));
-
-  localStorage.setItem("dartsCurrentPlayerIndex", 0);
-
-  alert("Game started! Go to scoreboard page.");
-
-  // Optionally redirect to scoreboard
-  window.location.href = "scoreboard.html";
-}
-
-function toggleFreezeScreen() {
-  const overlay = document.getElementById("freezeOverlay");
-  if (overlay.classList.contains("visible")) {
-    overlay.classList.remove("visible");
-    localStorage.setItem("dartsFreezeScreen", "false");
-  } else {
-    overlay.classList.add("visible");
-    localStorage.setItem("dartsFreezeScreen", "true");
+  // Placeholder for startMatch function — implement your game logic here
+  function startMatch() {
+    updateMatchTitle();
+    updateCurrentTurn();
+    clearThrowInputs();
+    log(`Match started: ${tournamentMatches[currentMatchIndex].join(" vs ")}`);
   }
-}
 
-// On load, read freeze screen state
-window.addEventListener("load", () => {
-  const freeze = localStorage.getItem("dartsFreezeScreen");
-  if (freeze === "true") {
-    document.getElementById("freezeOverlay").classList.add("visible");
+  // Update match title on score form
+  function updateMatchTitle() {
+    const matchTitle = document.getElementById("matchTitle");
+    if (isTournament) {
+      matchTitle.textContent = `Match ${currentMatchIndex + 1}: ${tournamentMatches[currentMatchIndex][0]} vs ${tournamentMatches[currentMatchIndex][1]}`;
+    } else {
+      matchTitle.textContent = `Game: ${players.join(", ")}`;
+    }
   }
-  renderPlayerList();
-  document.getElementById("tournamentMode").addEventListener("change", renderPlayerList);
-});
+
+  // Update current turn display
+  function updateCurrentTurn() {
+    const currentTurnDiv = document.getElementById("currentTurn");
+    const currentPlayers = isTournament ? tournamentMatches[currentMatchIndex] : players;
+    currentTurnDiv.textContent = `Current Player: ${currentPlayers[currentPlayerIndex]}`;
+  }
+
+  // Clear throw inputs
+  function clearThrowInputs() {
+    document.getElementById("throw1").value = "";
+    document.getElementById("throw2").value = "";
+    document.getElementById("throw3").value = "";
+  }
+
+  // Submit score (basic skeleton)
+  function submitScore() {
+    const t1 = parseInt(document.getElementById("throw1").value) || 0;
+    const t2 = parseInt(document.getElementById("throw2").value) || 0;
+    const t3 = parseInt(document.getElementById("throw3").value) || 0;
+
+    const total = t1 + t2 + t3;
+
+    const currentPlayers = isTournament ? tournamentMatches[currentMatchIndex] : players;
+    const currentPlayer = currentPlayers[currentPlayerIndex];
+
+    // Update score
+    scores[currentPlayer].score -= total;
+    if (scores[currentPlayer].score < 0) scores[currentPlayer].score = scores[currentPlayer].score + total; // bust (no change)
+
+    log(`${currentPlayer} scored ${total}. Remaining: ${scores[currentPlayer].score}`);
+
+    // Next player
+    currentPlayerIndex++;
+    if (currentPlayerIndex >= currentPlayers.length) currentPlayerIndex = 0;
+
+    updateCurrentTurn();
+    clearThrowInputs();
+
+    // TODO: Add win checking, tournament match logic, etc.
+  }
+
+  // Log helper
+  function log(msg) {
+    const logDiv = document.getElementById("log");
+    logDiv.innerHTML += `<div>${msg}</div>`;
+    logDiv.scrollTop = logDiv.scrollHeight;
+  }
+
+  // Freeze screen toggle logic (admin only: does not freeze admin screen itself)
+  function toggleFreezeScreen() {
+    const btn = document.getElementById("freezeToggleBtn");
+    const freezeOn = btn.textContent.includes("OFF"); // if currently OFF, turn ON
+
+    if (freezeOn) {
+      localStorage.setItem("dartsFreezeScreen", "true");
+      btn.textContent = "FREEZE SCREEN ON";
+      btn.style.backgroundColor = "#27ae60";  // green
+      btn.style.color = "#fff";
+      log("Freeze Screen ENABLED (public display should freeze)");
+    } else {
+      localStorage.setItem("dartsFreezeScreen", "false");
+      btn.textContent = "FREEZE SCREEN OFF";
+      btn.style.backgroundColor = "#c0392b";  // red
+      btn.style.color = "#fff";
+      log("Freeze Screen DISABLED (public display should unfreeze)");
+    }
+  }
+
+  // On load, set freeze button to saved state
+  window.addEventListener("load", () => {
+    const freeze = localStorage.getItem("dartsFreezeScreen") === "true";
+    const btn = document.getElementById("freezeToggleBtn");
+    if (freeze) {
+      btn.textContent = "FREEZE SCREEN ON";
+      btn.style.backgroundColor = "#27ae60";  // green
+      btn.style.color = "#fff";
+    } else {
+      btn.textContent = "FREEZE SCREEN OFF";
+      btn.style.backgroundColor = "#c0392b";  // red
+      btn.style.color = "#fff";
+    }
+    renderPlayerList();
+  });
 </script>
 
 </body>
