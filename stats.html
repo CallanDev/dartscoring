@@ -1,102 +1,127 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>Join & Stats</title>
-  <style>
-    body { background: #000; color: #ffcc00; text-align: center; font-family: sans-serif; padding: 20px; }
-    #logo, #noGame { margin-top: 50px; font-size: 2rem; }
-    video, canvas { border: 2px solid #ffcc00; margin-top: 10px; width: 320px; }
-    .stat { margin: 10px 0; font-size: 1.2rem; }
-  </style>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Darts Stats</title>
+<style>
+body {
+  background: #111;
+  color: #eee;
+  font-family: 'Arial', sans-serif;
+  margin: 0; padding: 20px;
+}
+h1 {
+  color: #ffcc00;
+  text-align: center;
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 15px;
+  background: #222;
+}
+th, td {
+  padding: 10px;
+  border: 1px solid #333;
+  text-align: center;
+}
+th {
+  background: #444;
+  color: #ffcc00;
+}
+img.player-pic {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+</style>
 </head>
 <body>
-  <h1>Join Game / Your Stats</h1>
 
-  <div id="joinArea">
-    <input type="text" id="name" placeholder="Enter name" /><br/>
-    <button id="takePic">Take Picture</button><br/>
-    <div id="camera" style="display:none;">
-      <video id="vid" autoplay></video><br/>
-      <button id="snap">Snap</button>
-    </div>
-  </div>
+<h1>Darts Tournament Stats</h1>
 
-  <div id="noGame" style="display:none;">
-    <img id="logo" src="assets/Logo.png" alt="Logo" /><br/>
-    NO GAME ACTIVE
-  </div>
-
-  <div id="statsArea" style="display:none;">
-    <h2>Your Stats</h2>
-    <div class="stat" id="yourStats"></div>
-    <h3>Players Joined:</h3>
-    <div id="playerList"></div>
-  </div>
+<table id="statsTable">
+  <thead>
+    <tr>
+      <th>Rank</th>
+      <th>Player</th>
+      <th>Avg Score</th>
+      <th>Games Played</th>
+      <th>Wins</th>
+      <th>Losses</th>
+      <th>Win %</th>
+      <th>Lose %</th>
+    </tr>
+  </thead>
+  <tbody></tbody>
+</table>
 
 <script>
-// State variables
-let joinedName = null;
+let players = [];
+let playerPics = {};
+let stats = {}; // stats per player: {games: x, wins: y, losses: z, totalScore: n}
 
-// Join flow
-document.getElementById('takePic').onclick = async () => {
-  const name = document.getElementById('name').value.trim();
-  if (!name) return alert('Enter your name');
-  const stream = await navigator.mediaDevices.getUserMedia({video:true});
-  const vid = document.getElementById('vid');
-  vid.srcObject = stream;
-  document.getElementById('camera').style.display = 'block';
+function loadStats() {
+  players = JSON.parse(localStorage.getItem("dartsPlayers") || "[]");
+  playerPics = JSON.parse(localStorage.getItem("dartsPlayerPics") || "{}");
+  stats = JSON.parse(localStorage.getItem("dartsPlayerStats") || "{}");
 
-  document.getElementById('snap').onclick = () => {
-    const canvas = document.createElement('canvas');
-    canvas.width = vid.videoWidth;
-    canvas.height = vid.videoHeight;
-    canvas.getContext('2d').drawImage(vid, 0, 0);
-    const img = canvas.toDataURL();
-    stream.getTracks().forEach(t => t.stop());
-    const arr = JSON.parse(localStorage.getItem('darts_joined')||'[]');
-    if (!arr.some(p=>p.name===name)) {
-      arr.push({name,img});
-      localStorage.setItem('darts_joined', JSON.stringify(arr));
+  // Ensure stats for all players
+  players.forEach(p => {
+    if (!stats[p]) {
+      stats[p] = { games: 0, wins: 0, losses: 0, totalScore: 0 };
     }
-    joinedName = name;
-    document.getElementById('joinArea').style.display = 'none';
-    refresh();
-  };
-};
+  });
+}
 
-// Refresh display
+function calculateAverages() {
+  players.forEach(p => {
+    const s = stats[p];
+    s.avg = s.games > 0 ? (s.totalScore / s.games).toFixed(2) : "0.00";
+    s.winPercent = s.games > 0 ? ((s.wins / s.games) * 100).toFixed(1) : "0.0";
+    s.losePercent = s.games > 0 ? ((s.losses / s.games) * 100).toFixed(1) : "0.0";
+  });
+}
+
+function renderStats() {
+  const tbody = document.querySelector("#statsTable tbody");
+  calculateAverages();
+
+  // Sort by avg score descending
+  const sorted = [...players].sort((a, b) => (stats[b].avg - stats[a].avg));
+
+  tbody.innerHTML = sorted.map((p, idx) => {
+    const s = stats[p];
+    const pic = playerPics[p] || "assets/default_player.png";
+    return `<tr>
+      <td>${idx + 1}</td>
+      <td style="text-align:left;">
+        <img class="player-pic" src="${pic}" alt="${p}" />
+        &nbsp;${p}
+      </td>
+      <td>${s.avg}</td>
+      <td>${s.games}</td>
+      <td>${s.wins}</td>
+      <td>${s.losses}</td>
+      <td>${s.winPercent}%</td>
+      <td>${s.losePercent}%</td>
+    </tr>`;
+  }).join("");
+}
+
 function refresh() {
-  const game = JSON.parse(localStorage.getItem('darts_game') || '{}');
-  if (!game.active) {
-    document.getElementById('noGame').style.display = 'block';
-    document.getElementById('statsArea').style.display = 'none';
-    return;
-  }
-  document.getElementById('noGame').style.display = 'none';
-  document.getElementById('statsArea').style.display = 'block';
-
-  const stats = game.scores[joinedName];
-  document.getElementById('yourStats').innerText =
-    `Throws: ${stats.throws} | Avg Points: ${ (stats.total / stats.throws || 0).toFixed(2) }` +
-    (stats.score !== undefined ? ` | Remaining: ${stats.score}` : '');
-
-  const players = JSON.parse(localStorage.getItem('darts_joined') || '[]');
-  document.getElementById('playerList').innerHTML = players.map(p =>
-    `<div><img src="${p.img}" style="width:40px;vertical-align:middle" /> ${p.name}</div>`
-  ).join('');
+  loadStats();
+  renderStats();
 }
 
-// Listen for game updates
-window.addEventListener('storage', e => {
-  if (e.key === 'darts_game') refresh();
+window.addEventListener("load", () => {
+  refresh();
+  setInterval(refresh, 5000); // Refresh every 5 seconds
 });
-
-// Initial
-if (localStorage.getItem('darts_logo') === 'on') {
-  document.getElementById('logo').style.display = 'block';
-}
-refresh();
 </script>
+
 </body>
 </html>
+
