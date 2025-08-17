@@ -1,156 +1,100 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Darts Scoreboard</title>
-<style>
-  body {
-    font-family: 'Arial', sans-serif;
-    background-color: #111;
-    color: #eee;
-    margin: 0; padding: 20px;
-    text-align: center;
-  }
-  #logo {
-    position: fixed;
-    top: 20px; left: 50%;
-    transform: translateX(-50%);
-    width: 250px;
-    opacity: 0;
-    transition: opacity 1.5s ease;
-    pointer-events: none;
-  }
-  #logo.show {
-    opacity: 1;
-  }
-  #scoreboard {
-    max-width: 720px;
-    margin: 60px auto 0;
-  }
-  table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 1.2rem;
-  }
-  th, td {
-    border: 1px solid #444;
-    padding: 10px;
-  }
-  th {
-    background-color: #222;
-  }
-  #ballSmashBoard {
-    position: relative;
-    margin: 20px auto;
-    width: 500px;
-    height: 500px;
-    background: url('assets/DARTS.jpg') no-repeat center center;
-    background-size: contain;
-    border: 2px solid #555;
-    border-radius: 50%;
-  }
-  .ball-icon {
-    position: absolute;
-    font-size: 20px;
-    user-select: none;
-  }
-</style>
+  <meta charset="UTF-8" />
+  <title>Darts Scoreboard</title>
+  <style>
+    body {
+      background-color: #000;
+      color: #ffcc00;
+      font-family: Arial Black, sans-serif;
+      text-align: center;
+      margin: 0;
+      padding: 20px;
+    }
+    h1 {
+      font-size: 3rem;
+      margin-bottom: 10px;
+    }
+    #scoreboard {
+      max-width: 800px;
+      margin: 0 auto;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    th, td {
+      padding: 15px;
+      border: 2px solid #ffcc00;
+      font-size: 1.5rem;
+    }
+    th {
+      background-color: #333300;
+    }
+    #logoContainer {
+      display: none;
+    }
+    #logoContainer img {
+      width: 300px;
+      margin-top: 40px;
+    }
+    #noGameMsg {
+      color: #999;
+      margin-top: 20px;
+    }
+  </style>
 </head>
 <body>
+  <h1>Darts Scoreboard</h1>
+  <div id="scoreboard" style="display:none;">
+    <table>
+      <thead>
+        <tr><th>Player</th><th>Score</th><th>Average</th></tr>
+      </thead>
+      <tbody id="scoreBody"></tbody>
+    </table>
+  </div>
 
-<img id="logo" src="assets/Logo.png" alt="Logo" />
+  <div id="logoContainer">
+    <img src="assets/Logo.png" alt="Darts Logo" />
+    <div id="noGameMsg">NO GAME ACTIVE</div>
+  </div>
 
-<h1>Darts Scoreboard</h1>
+  <script>
+    function updateDisplay() {
+      const logo = localStorage.getItem("darts_logo") === "on";
+      const gameDataRaw = localStorage.getItem("darts_game");
+      const board = document.getElementById("scoreboard");
+      const logoContainer = document.getElementById("logoContainer");
 
-<div id="scoreboard"></div>
+      if (logo || !gameDataRaw) {
+        board.style.display = "none";
+        logoContainer.style.display = "block";
+        return;
+      }
 
-<div id="ballSmashBoard" style="display:none;"></div>
+      const data = JSON.parse(gameDataRaw);
+      if (!data.active) {
+        board.style.display = "none";
+        logoContainer.style.display = "block";
+        return;
+      }
 
-<script>
-  let scores = {};
-  let players = [];
-  let gameMode = "501";
-  let currentGame = "501";
-  let logoScreenOn = false;
+      const tbody = document.getElementById("scoreBody");
+      tbody.innerHTML = data.players.map(p => {
+        const s = data.scores[p.name] || { score: 0, average: 0 };
+        const score = data.mode === "practice" ? s.total : s.score;
+        return `<tr><td>${p.name}</td><td>${score}</td><td>${s.average}</td></tr>`;
+      }).join("");
 
-  // Emojis/icons for ball smash spots
-  const ballSmashIcons = ['🎯', '⭐', '🔥', '💥', '🎉', '🍀', '🍎', '🎵', '💎', '⚡️', '🌟', '🍇', '🍒', '🎈', '🚀', '⚽️'];
-
-  // Positions mapped roughly on the board for 16 spots
-  const ballPositions = [
-    { top: "10%", left: "50%" }, { top: "20%", left: "70%" }, { top: "30%", left: "80%" }, { top: "40%", left: "90%" },
-    { top: "50%", left: "90%" }, { top: "60%", left: "80%" }, { top: "70%", left: "70%" }, { top: "80%", left: "50%" },
-    { top: "70%", left: "30%" }, { top: "60%", left: "20%" }, { top: "50%", left: "10%" }, { top: "40%", left: "10%" },
-    { top: "30%", left: "20%" }, { top: "20%", left: "30%" }, { top: "15%", left: "40%" }, { top: "12%", left: "45%" },
-  ];
-
-  // Load scores and players from localStorage
-  function loadData() {
-    const scoresRaw = localStorage.getItem("darts_scores");
-    const playersRaw = localStorage.getItem("darts_players");
-    const mode = localStorage.getItem("darts_game_mode") || "501";
-    const logoOn = localStorage.getItem("darts_logo_on") === "true";
-
-    if (scoresRaw) scores = JSON.parse(scoresRaw);
-    if (playersRaw) players = JSON.parse(playersRaw);
-    gameMode = mode;
-    currentGame = mode;
-    logoScreenOn = logoOn;
-  }
-
-  // Render scoreboard table
-  function renderScoreboard() {
-    const scoreboard = document.getElementById("scoreboard");
-    if (!players.length) {
-      scoreboard.innerHTML = "<p>No players to show.</p>";
-      return;
+      board.style.display = "block";
+      logoContainer.style.display = "none";
     }
 
-    if (currentGame === "ballSmash") {
-      renderBallSmash();
-      return;
-    }
-
-    let html = `<table><thead><tr><th>Player</th><th>Score</th><th>Shots Played</th><th>Average</th></tr></thead><tbody>`;
-    players.forEach(p => {
-      const s = scores[p.name] || { score: gameMode, shots: 0, average: 0, totalPoints: 0 };
-      html += `<tr><td>${p.name}</td><td>${typeof s.score === 'number' ? s.score : s.totalPoints || 0}</td><td>${s.shots || 0}</td><td>${s.average || 0}</td></tr>`;
-    });
-    html += "</tbody></table>";
-    scoreboard.innerHTML = html;
-  }
-
-  // Render Ball Smash board
-  function renderBallSmash() {
-    const ballBoard = document.getElementById("ballSmashBoard");
-    ballBoard.style.display = "block";
-    let html = "";
-    players.forEach((p, idx) => {
-      const pos = ballPositions[idx % ballPositions.length];
-      const s = scores[p.name] || { totalPoints: 0 };
-      html += `<div class="ball-icon" style="top:${pos.top};left:${pos.left}" title="${p.name}: ${s.totalPoints}">${ballSmashIcons[idx % ballSmashIcons.length]}</div>`;
-    });
-    ballBoard.innerHTML = html;
-  }
-
-  // Show/hide logo
-  function updateLogo() {
-    const logoEl = document.getElementById("logo");
-    if (logoScreenOn) {
-      logoEl.classList.add("show");
-    } else {
-      logoEl.classList.remove("show");
-    }
-  }
-
-  window.onload = () => {
-    loadData();
-    renderScoreboard();
-    updateLogo();
-  };
-</script>
-
+    setInterval(updateDisplay, 500);
+    updateDisplay();
+  </script>
 </body>
 </html>
 
