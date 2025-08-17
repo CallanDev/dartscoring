@@ -6,49 +6,46 @@
 <title>Darts Stats</title>
 <style>
 body {
-  background-color: #111;
-  color: #eee;
-  font-family: 'Arial', sans-serif;
-  margin: 0;
-  padding: 20px;
+  background-color: #121212;
+  color: #ffcc00;
+  font-family: Arial, sans-serif;
+  padding: 30px;
 }
 h1 {
-  color: #ffcc00;
+  text-align: center;
   margin-bottom: 20px;
+  text-shadow: 0 0 6px #ffcc00;
 }
 table {
-  width: 100%;
+  margin: 0 auto;
   border-collapse: collapse;
-  background: #222;
+  width: 70%;
+  max-width: 600px;
 }
 th, td {
-  padding: 10px;
-  border: 1px solid #444;
-  text-align: left;
+  border: 1px solid #ffcc00;
+  padding: 12px 15px;
+  text-align: center;
 }
 th {
-  background-color: #333;
-  color: #ffcc00;
+  background-color: #333300;
 }
-.player-photo {
-  height: 40px;
-  width: 40px;
-  border-radius: 50%;
-  object-fit: cover;
-  border: 2px solid #ffcc00;
+tbody tr:hover {
+  background-color: #444400;
 }
 </style>
 </head>
 <body>
-<h1>Darts Player Stats</h1>
+
+<h1>Player Statistics</h1>
+
 <table>
   <thead>
     <tr>
       <th>Player</th>
-      <th>Photo</th>
       <th>Games Played</th>
       <th>Wins</th>
-      <th>Losses</th>
+      <th>Avg Score per Throw</th>
       <th>Win %</th>
     </tr>
   </thead>
@@ -56,65 +53,37 @@ th {
 </table>
 
 <script>
-let players = [];
-let matchWinners = [];
-let matchLosers = [];
+function loadStats() {
+  const stats = JSON.parse(localStorage.getItem("darts_stats")) || {};
+  const players = Object.keys(stats);
 
-function loadState() {
-  const stateStr = localStorage.getItem("dartGameState");
-  if (!stateStr) return;
-  const state = JSON.parse(stateStr);
-  players = state.players || [];
-  matchWinners = state.matchWinners || [];
-  matchLosers = state.matchLosers || [];
-
-  renderStats();
-}
-
-function renderStats() {
-  const tbody = document.getElementById("statsBody");
-  tbody.innerHTML = "";
-
-  // Build stats by player name
-  const stats = {};
-  for (const p of players) {
-    stats[p.name] = { played: 0, wins: 0, losses: 0 };
+  if (players.length === 0) {
+    document.getElementById("statsBody").innerHTML = `<tr><td colspan="5">No stats available.</td></tr>`;
+    return;
   }
 
-  for (const w of matchWinners) {
-    if (stats[w]) {
-      stats[w].wins++;
-      stats[w].played++;
-    }
-  }
-  for (const l of matchLosers) {
-    if (stats[l]) {
-      stats[l].losses++;
-      stats[l].played++;
-    }
-  }
+  const rows = players.map((player) => {
+    const { gamesPlayed, wins, totalScore, throwsCount } = stats[player];
+    const avgScore = throwsCount > 0 ? (totalScore / throwsCount).toFixed(2) : "0.00";
+    const winPercent = gamesPlayed > 0 ? ((wins / gamesPlayed) * 100).toFixed(1) : "0.0";
 
-  for (const p of players) {
-    const s = stats[p.name];
-    const winPercent = s.played > 0 ? ((s.wins / s.played) * 100).toFixed(1) : "0.0";
-    tbody.innerHTML += `
+    return `
       <tr>
-        <td>${p.name}</td>
-        <td><img src="${p.photo}" alt="${p.name}" class="player-photo"></td>
-        <td>${s.played}</td>
-        <td>${s.wins}</td>
-        <td>${s.losses}</td>
+        <td>${player}</td>
+        <td>${gamesPlayed}</td>
+        <td>${wins}</td>
+        <td>${avgScore}</td>
         <td>${winPercent}%</td>
       </tr>
     `;
-  }
+  });
+
+  document.getElementById("statsBody").innerHTML = rows.join("");
 }
 
-window.addEventListener("storage", () => {
-  loadState();
-});
-
-loadState();
+loadStats();
 </script>
+
 </body>
 </html>
+
