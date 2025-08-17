@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Darts Scoreboard</title>
+<style>
+body {
+  background: radial-gradient(circle at center, #0a0a0a 0%, #121212 90%);
+  color: #ffcc00;
+  font-family: 'Arial Black', Arial, sans-serif;
+  margin: 0;
+  padding: 30px;
+  user-select: none;
+}
+h1 {
+  text-align: center;
+  font-size: 3rem;
+  margin-bottom: 10px;
+  text-shadow: 0 0 8px #ffcc00;
+}
+#matchInfo {
+  text-align: center;
+  font-size: 1.5rem;
+  margin-bottom: 20px;
+  letter-spacing: 1px;
+}
+#scoreTable {
+  margin: 0 auto;
+  width: 400px;
+  border-collapse: collapse;
+}
+#scoreTable th, #scoreTable td {
+  border: 2px solid #ffcc00;
+  padding: 15px 10px;
+  font-size: 1.4rem;
+  text-align: center;
+}
+#scoreTable th {
+  background: #333300;
+}
+#scoreTable td.playerName {
+  font-weight: bold;
+  text-align: left;
+  padding-left: 20px;
+}
+#popup {
+  position: fixed;
+  top: 15%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: #222200;
+  border: 3px solid #ffcc00;
+  color: #fff;
+  font-size: 2rem;
+  padding: 20px 40px;
+  border-radius: 10px;
+  box-shadow: 0 0 15px #ffcc00;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+  z-index: 1000;
+}
+#finalResults {
+  max-width: 500px;
+  margin: 40px auto 0;
+  background: #222200cc;
+  border: 2px solid #ffcc00;
+  border-radius: 12px;
+  padding: 20px;
+}
+#finalResults h2 {
+  text-align: center;
+  margin-bottom: 15px;
+}
+#finalResults ol {
+  font-size: 1.3rem;
+  padding-left: 20px;
+}
+</style>
+</head>
+<body>
+
+<h1>Darts Scoreboard</h1>
+<div id="matchInfo">Waiting for game to start...</div>
+
+<table id="scoreTable" hidden>
+  <thead>
+    <tr><th>Player</th><th>Score</th><th>Average</th></tr>
+  </thead>
+  <tbody id="scoreBody"></tbody>
+</table>
+
+<div id="finalResults" hidden>
+  <h2>Tournament Results</h2>
+  <ol id="finalList"></ol>
+</div>
+
+<div id="popup"></div>
+
+<script>
+const matchInfo = document.getElementById("matchInfo");
+const scoreTable = document.getElementById("scoreTable");
+const scoreBody = document.getElementById("scoreBody");
+const popup = document.getElementById("popup");
+const finalResults = document.getElementById("finalResults");
+const finalList = document.getElementById("finalList");
+
+let currentGame = null;
+let popupTimeout = null;
+
+// Show popup message
+function showPopup(message) {
+  popup.textContent = message;
+  popup.style.opacity = "1";
+  popup.style.pointerEvents = "auto";
+
+  if (popupTimeout) clearTimeout(popupTimeout);
+  popupTimeout = setTimeout(() => {
+    popup.style.opacity = "0";
+    popup.style.pointerEvents = "none";
+  }, 3500);
+}
+
+// Load game data from localStorage
+function loadGame() {
+  const storedGame = localStorage.getItem("darts_game");
+  const final = localStorage.getItem("darts_final_results");
+
+  if (final) {
+    // Show final tournament results
+    showFinalResults(JSON.parse(final));
+    return;
+  }
+
+  if (!storedGame) {
+    matchInfo.textContent = "Waiting for game to start...";
+    scoreTable.hidden = true;
+    finalResults.hidden = true;
+    return;
+  }
+
+  currentGame = JSON.parse(storedGame);
+
+  displayScores(currentGame);
+  finalResults.hidden = true;
+  scoreTable.hidden = false;
+  matchInfo.textContent = `Match: ${currentGame.players[0]} vs ${currentGame.players[1]}`;
+
+  // Check if popup message exists and show it once
+  const popupData = localStorage.getItem("darts_popup");
+  if (popupData) {
+    const { message, timestamp } = JSON.parse(popupData);
+    if (Date.now() - timestamp < 4000) {
+      showPopup(message);
+    }
+    localStorage.removeItem("darts_popup");
+  }
+}
+
+// Display scores and averages
+function displayScores(game) {
+  scoreBody.innerHTML = "";
+  for (const player of game.players) {
+    const s = game.scores[player];
+    scoreBody.innerHTML += `
+      <tr ${game.currentPlayerIndex !== undefined && game.players[game.currentPlayerIndex] === player ? 'style="background:#444400"' : ''}>
+        <td class="playerName">${player}</td>
+        <td>${s.score}</td>
+        <td>${s.average ? s.average : "0.00"}</td>
+      </tr>
+    `;
+  }
+}
+
+// Show final tournament placements
+function showFinalResults(placements) {
+  matchInfo.textContent = "Tournament Complete!";
+  scoreTable.hidden = true;
+  finalResults.hidden = false;
+
+  finalList.innerHTML = placements
+    .map((p, i) => `<li>${i + 1}. ${p}</li>`)
+    .join("");
+}
+
+// Periodically refresh scoreboard
+setInterval(loadGame, 1500);
+loadGame();
+</script>
+
+</body>
+</html>
+
