@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Darts Admin</title>
+  <style>
+    body {
+      font-family: 'Arial', sans-serif;
+      background-color: #1a1a1a;
+      color: #fff;
+      margin: 0;
+      padding: 20px;
+    }
+    h1, h2 {
+      color: #ffcc00;
+    }
+    select, input, button {
+      font-size: 1rem;
+      padding: 8px;
+      margin: 5px;
+    }
+    .player-list {
+      margin-top: 10px;
+    }
+    .score-input {
+      margin-top: 20px;
+    }
+    .log {
+      margin-top: 20px;
+      max-height: 150px;
+      overflow-y: auto;
+      background: #222;
+      padding: 10px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Darts Admin Panel</h1>
+
+  <h2>Game Setup</h2>
+  <label>Game Mode:</label>
+  <select id="gameMode">
+    <option value="301">301</option>
+    <option value="501" selected>501</option>
+    <option value="701">701</option>
+    <option value="practice">Practice</option>
+  </select>
+  <br>
+  <label>Tournament Mode:</label>
+  <input type="checkbox" id="tournamentMode">
+
+  <div>
+    <label>Add Player:</label>
+    <input type="text" id="playerName">
+    <button onclick="addPlayer()">Add</button>
+  </div>
+
+  <div class="player-list" id="playerList"></div>
+
+  <button onclick="startGame()">Start Game</button>
+
+  <div class="score-input" id="scoreInput" style="display:none;">
+    <h2>Enter Score</h2>
+    <div id="currentTurn"></div>
+    <input type="number" id="score" min="0" max="180">
+    <button onclick="submitScore()">Submit</button>
+  </div>
+
+  <div class="log" id="log"></div>
+
+  <script>
+    let players = [];
+    let scores = {};
+    let currentPlayerIndex = 0;
+    let gameStarted = false;
+    let gameMode = 501;
+
+    function addPlayer() {
+      const name = document.getElementById('playerName').value.trim();
+      if (!name) return;
+      if (players.includes(name)) return alert("Player already added.");
+
+      players.push(name);
+      document.getElementById('playerName').value = '';
+      updatePlayerList();
+    }
+
+    function updatePlayerList() {
+      document.getElementById('playerList').innerHTML = '<ul>' +
+        players.map(p => `<li>${p}</li>`).join('') + '</ul>';
+    }
+
+    function startGame() {
+      if (players.length < 2) {
+        alert("Add at least 2 players.");
+        return;
+      }
+
+      gameMode = document.getElementById('gameMode').value;
+      const isTournament = document.getElementById('tournamentMode').checked;
+
+      // Shuffle players if tournament
+      if (isTournament) {
+        players.sort(() => 0.5 - Math.random());
+      }
+
+      scores = {};
+      for (let p of players) {
+        scores[p] = {
+          score: parseInt(gameMode),
+          history: [],
+          average: 0
+        };
+      }
+
+      currentPlayerIndex = 0;
+      gameStarted = true;
+
+      document.getElementById('scoreInput').style.display = 'block';
+      localStorage.setItem('darts_game', JSON.stringify({ players, scores, currentPlayerIndex, gameMode }));
+
+      log(`Game started: Mode ${gameMode}`);
+      updateCurrentTurn();
+    }
+
+    function updateCurrentTurn() {
+      const player = players[currentPlayerIndex];
+      document.getElementById('currentTurn').textContent = `Current Player: ${player} (Score: ${scores[player].score})`;
+    }
+
+    function submitScore() {
+      const val = parseInt(document.getElementById('score').value);
+      if (isNaN(val) || val < 0 || val > 180) return;
+
+      const player = players[currentPlayerIndex];
+      let playerScore = scores[player].score;
+      const newScore = playerScore - val;
+
+      if (newScore < 0) {
+        log(`${player} busts with ${val}!`);
+      } else {
+        scores[player].score = newScore;
+        scores[player].history.push(val);
+        const total = scores[player].history.reduce((a, b) => a + b, 0);
+        scores[player].average = (total / scores[player].history.length).toFixed(2);
+
+        if (newScore === 0) {
+          log(`${player} wins the game!`);
+          alert(`${player} wins!`);
+          localStorage.removeItem('darts_game');
+          gameStarted = false;
+          return;
+        }
+      }
+
+      currentPlayerIndex = (currentPlayerIndex + 1) % players.length;
+      localStorage.setItem('darts_game', JSON.stringify({ players, scores, currentPlayerIndex, gameMode }));
+      updateCurrentTurn();
+      updateScoreboard();
+    }
+
+    function updateScoreboard() {
+      localStorage.setItem('darts_game', JSON.stringify({ players, scores, currentPlayerIndex, gameMode }));
+    }
+
+    function log(message) {
+      const logEl = document.getElementById('log');
+      logEl.innerHTML += `<div>${new Date().toLocaleTimeString()}: ${message}</div>`;
+      logEl.scrollTop = logEl.scrollHeight;
+    }
+  </script>
+</body>
+</html>
