@@ -19,6 +19,7 @@ input, select, button {
   padding: 8px;
   margin: 5px 0;
   font-size: 1rem;
+  cursor: pointer;
 }
 .section {
   margin-top: 20px;
@@ -49,35 +50,34 @@ input.throw-input {
   text-align: center;
   margin-right: 10px;
 }
-
 #lockButton {
-  font-weight: bold;
-  padding: 10px 20px;
-  margin-top: 20px;
+  background-color: #cc0000;
+  color: white;
   border: none;
-  cursor: pointer;
+  padding: 12px 20px;
   font-size: 1.2rem;
   border-radius: 6px;
-  background-color: #cc0000; /* red */
-  color: white;
+  margin-top: 20px;
   transition: background-color 0.3s ease;
 }
 #lockButton.locked {
-  background-color: #00cc00; /* green */
+  background-color: #009900;
 }
 </style>
 </head>
 <body>
 <h1>Darts Admin</h1>
 
+<button id="lockButton" onclick="toggleLock()">LOCK SCREENS</button>
+
 <div id="setupSection" class="section">
 <h2>Game Setup</h2>
 
 <label>Game Mode:</label>
 <select id="gameMode">
-<option value="301">301</option>
-<option value="501" selected>501</option>
-<option value="701">701</option>
+  <option value="301">301</option>
+  <option value="501" selected>501</option>
+  <option value="701">701</option>
 </select>
 
 <br />
@@ -97,9 +97,6 @@ input.throw-input {
 
 <button onclick="startGame()">Start Game</button>
 </div>
-
-<!-- LOCK SCREENS BUTTON -->
-<button id="lockButton" onclick="toggleLock()">LOCK SCREENS</button>
 
 <form id="scoreForm" class="score-input hidden" onsubmit="event.preventDefault(); submitScore();">
 <h2>Enter Score</h2>
@@ -166,14 +163,14 @@ function renderTournamentSelectors() {
   for (let i = 0; i < matchCount; i++) {
     container.innerHTML += `
     <div style="margin-bottom:10px;">
-    Match ${i + 1}:
-    <select id="match_${i}_p1">${players
-      .map((p) => `<option value="${p}">${p}</option>`)
-      .join("")}</select>
-    vs
-    <select id="match_${i}_p2">${players
-      .map((p) => `<option value="${p}">${p}</option>`)
-      .join("")}</select>
+      Match ${i + 1}:
+      <select id="match_${i}_p1">${players
+        .map((p) => `<option value="${p}">${p}</option>`)
+        .join("")}</select>
+      vs
+      <select id="match_${i}_p2">${players
+        .map((p) => `<option value="${p}">${p}</option>`)
+        .join("")}</select>
     </div>
     `;
   }
@@ -340,11 +337,6 @@ function syncToStorage() {
       },
     })
   );
-  // Also save full players scores for stats
-  localStorage.setItem(
-    "darts_all_scores",
-    JSON.stringify(scores)
-  );
 }
 
 // Save final tournament placements and clear game state
@@ -357,6 +349,10 @@ function saveFinalResults() {
 
   localStorage.removeItem("darts_game");
   localStorage.setItem("darts_final_results", JSON.stringify(placements));
+
+  // Also save full player scores for stats page (average scores)
+  localStorage.setItem("darts_player_stats", JSON.stringify(scores));
+
   showPopup(`Tournament Complete! 🏁`);
 
   document.getElementById("scoreForm").classList.add("hidden");
@@ -371,32 +367,31 @@ function log(message) {
   logEl.scrollTop = logEl.scrollHeight;
 }
 
-// LOCK SCREENS toggle button logic
-const lockButton = document.getElementById("lockButton");
+// Toggle lock screens button and state
 function toggleLock() {
-  const locked = localStorage.getItem("darts_lock") === "true";
+  const lockButton = document.getElementById("lockButton");
+  const locked = lockButton.classList.toggle("locked");
   if (locked) {
-    localStorage.setItem("darts_lock", "false");
-    lockButton.classList.remove("locked");
-    lockButton.textContent = "LOCK SCREENS";
-    log("Screens unlocked.");
-  } else {
-    localStorage.setItem("darts_lock", "true");
-    lockButton.classList.add("locked");
     lockButton.textContent = "UNLOCK SCREENS";
-    log("Screens locked.");
+    localStorage.setItem("darts_lock_screens", "locked");
+  } else {
+    lockButton.textContent = "LOCK SCREENS";
+    localStorage.setItem("darts_lock_screens", "unlocked");
   }
 }
-// Initialize lock button state on load
+
+// On page load: set button state based on localStorage
 window.addEventListener("load", () => {
-  const locked = localStorage.getItem("darts_lock") === "true";
-  if (locked) {
+  const lockState = localStorage.getItem("darts_lock_screens");
+  const lockButton = document.getElementById("lockButton");
+  if (lockState === "locked") {
     lockButton.classList.add("locked");
     lockButton.textContent = "UNLOCK SCREENS";
   } else {
     lockButton.classList.remove("locked");
     lockButton.textContent = "LOCK SCREENS";
   }
+  renderPlayerList();
 });
 
 // Initial render for players and tournament assignment UI
