@@ -2,312 +2,81 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Darts Admin</title>
   <style>
-    /* Base styling: dark, sleek, accent color gold/yellow */
-    body { font-family: Arial, sans-serif; background-color: #1a1a1a; color: #fff; margin: 0; padding: 20px; }
-    h1, h2 { color: #ffcc00; }
-    input, select, button { padding: 8px; margin: 5px 0; font-size: 1rem; }
-    button.logo-btn { padding: 10px; margin-top: 10px; background: red; color: #fff; border: none; cursor: pointer; }
-    button.logo-btn.active { background: green; }
-    .hidden { display: none; }
-    .section { margin-top: 20px; }
-    .match-selectors, .settings { margin-top: 10px; }
-    .log { margin-top: 20px; max-height: 150px; overflow-y: auto; background: #222; padding: 10px; font-size: 0.9rem; }
-    /* Optional: add flex/grid layout for admin panels */
+    body { background: #111; color: #fff; font-family: sans-serif; padding: 20px; }
+    h1 { color: #ffcc00; }
+    button, select, input { padding: 10px; margin: 5px; font-size: 1rem; }
+    .joined-player img { width: 50px; height: 50px; border-radius: 50%; object-fit: cover; }
+    .joined-player { margin: 5px 0; display: flex; align-items: center; gap: 10px; }
+    .logo-btn { background: red; color: white; font-weight: bold; }
+    .logo-on { background: green !important; }
   </style>
 </head>
 <body>
-  <h1>Darts Admin</h1>
-  <button id="logoToggle" class="logo-btn">LOGO SCREEN</button>
 
-  <div id="setupSection" class="section">
-    <h2>Game Setup</h2>
-    <label>Game Mode:</label>
-    <select id="gameMode">
-      <option value="practice">Practice</option>
-      <option value="301">301</option>
-      <option value="501" selected>501</option>
-      <option value="701">701</option>
-      <option value="angryBirds">Angry Birds</option>
-      <option value="ballSmash">Ball Smash</option>
-    </select>
-    <br />
-    <label>Tournament Mode:</label>
-    <input type="checkbox" id="tournamentMode" />
-    <div class="section">
-      <label>Add Player:</label>
-      <input type="text" id="playerName" />
-      <button id="addPlayerBtn">Add</button>
-    </div>
-    <ul id="playerList"></ul>
-    <div id="tournamentMatches" class="match-selectors hidden"></div>
-    <button id="randomAssignBtn">Randomly Assign Matches</button>
-    <button id="startGameBtn">Start Game</button>
-  </div>
+<h1>Darts Admin Panel</h1>
 
-  <div id="settingsSection" class="section">
-    <h2>Settings</h2>
-    <label><input type="checkbox" id="timerToggle" /> Enable turn timer</label>
-    <input type="number" id="timerDuration" min="5" max="120" step="5" value="30" /> seconds
-  </div>
+<label>Game Mode:</label>
+<select id="gameMode">
+  <option value="practice">Practice</option>
+  <option value="301">301</option>
+  <option value="501">501</option>
+  <option value="701">701</option>
+  <option value="last-man-standing">Last Man Standing</option>
+  <option value="ball-smash">Ball Smash</option>
+</select><br>
 
-  <form id="scoreForm" class="score-input hidden" onsubmit="event.preventDefault(); submitScore();">
-    <h2>Enter Score</h2>
-    <div id="matchTitle" style="font-weight:bold; font-size:1.2rem; margin-bottom:5px;"></div>
-    <div id="currentTurn" style="margin-bottom:15px;"></div>
-    <label class="throw-label" for="throw1">Throw 1:</label>
-    <input type="number" id="throw1" class="throw-input" min="0" max="180" required />
-    <label class="throw-label" for="throw2">Throw 2:</label>
-    <input type="number" id="throw2" class="throw-input" min="0" max="180" required />
-    <label class="throw-label" for="throw3">Throw 3:</label>
-    <input type="number" id="throw3" class="throw-input" min="0" max="180" required />
-    <br />
-    <button type="submit">Submit</button>
-  </form>
+<label>Turn Timer (seconds, 0 = off):</label>
+<input type="number" id="timer" value="0" /><br>
 
-  <div class="log" id="log"></div>
+<button id="openJoiningBtn">OPEN JOINING</button>
+<button id="startGameBtn">START GAME</button>
+<button id="logoToggleBtn" class="logo-btn">LOGO SCREEN</button>
 
-  <script>
-    // Variables
-    let players = [];
-    let gameMode = '501';
-    let isTournament = false;
-    let tournamentMatches = [];
-    let currentMatchIndex = 0;
-    let matchScores = {};
-    let matchWinners = [];
-    let matchLosers = [];
-    let scores = {};
-    let timer = null;
+<h2>Joined Players</h2>
+<div id="joinedPlayersList"></div>
 
-    // Elements
-    const logoBtn = document.getElementById('logoToggle');
-    const setupSection = document.getElementById('setupSection');
-    const settingsSection = document.getElementById('settingsSection');
-    const playerListEl = document.getElementById('playerList');
-    const tournamentMatchesEl = document.getElementById('tournamentMatches');
-    const randomAssignBtn = document.getElementById('randomAssignBtn');
-    const startGameBtn = document.getElementById('startGameBtn');
-    const addPlayerBtn = document.getElementById('addPlayerBtn');
-    const playerNameInput = document.getElementById('playerName');
-    const gameModeSelect = document.getElementById('gameMode');
-    const tournamentToggle = document.getElementById('tournamentMode');
-    const timerToggle = document.getElementById('timerToggle');
-    const timerDuration = document.getElementById('timerDuration');
-    const scoreForm = document.getElementById('scoreForm');
-    const matchTitle = document.getElementById('matchTitle');
-    const currentTurnEl = document.getElementById('currentTurn');
-    const throwInputs = ['throw1', 'throw2', 'throw3'].map(id => document.getElementById(id));
-    const logEl = document.getElementById('log');
+<script>
+  const joiningKey = 'joining_open';
+  const gameKey = 'current_game';
+  const logoKey = 'logo_mode';
 
-    // Utilities
-    function log(msg) {
-      logEl.innerHTML += `<div>${new Date().toLocaleTimeString()}: ${msg}</div>`;
-      logEl.scrollTop = logEl.scrollHeight;
-    }
+  const joinedList = document.getElementById('joinedPlayersList');
+  const btn = document.getElementById('openJoiningBtn');
+  const startBtn = document.getElementById('startGameBtn');
+  const logoBtn = document.getElementById('logoToggleBtn');
+  let logoOn = false;
 
-    function addPlayer() {
-      const name = playerNameInput.value.trim();
-      if (!name || players.includes(name)) return;
-      players.push(name);
-      playerNameInput.value = '';
-      renderPlayerList();
-    }
+  function refreshJoinedPlayers() {
+    const players = JSON.parse(localStorage.getItem("joined_players") || "[]");
+    joinedList.innerHTML = players.map(p =>
+      `<div class="joined-player"><img src="${p.image}" /> <strong>${p.name}</strong></div>`
+    ).join('');
+  }
 
-    function renderPlayerList() {
-      playerListEl.innerHTML = players.map(p => `<li>${p}</li>`).join('');
-      if (tournamentToggle.checked && players.length >= 2) {
-        renderMatchSelectors();
-      } else {
-        tournamentMatchesEl.classList.add('hidden');
-      }
-    }
+  setInterval(refreshJoinedPlayers, 1000);
 
-    function renderMatchSelectors() {
-      tournamentMatchesEl.innerHTML = '<h3>Assign Matches</h3>';
-      const matchCount = Math.floor(players.length / 2);
-      for (let i = 0; i < matchCount; i++) {
-        tournamentMatchesEl.innerHTML += `
-          <div>
-            Match ${i+1}:
-            <select id="match_${i}_p1">${players.map(p => `<option>${p}</option>`).join('')}</select>
-            vs
-            <select id="match_${i}_p2">${players.map(p => `<option>${p}</option>`).join('')}</select>
-          </div>`;
-      }
-      tournamentMatchesEl.classList.remove('hidden');
-    }
+  btn.onclick = () => {
+    localStorage.setItem(joiningKey, "true");
+    refreshJoinedPlayers();
+  };
 
-    function randomAssignMatches() {
-      const shuffled = [...players].sort(() => Math.random() - 0.5);
-      tournamentMatches = [];
-      for (let i = 0; i < shuffled.length - 1; i += 2) {
-        tournamentMatches.push([shuffled[i], shuffled[i+1]]);
-      }
-      if (shuffled.length % 2 === 1) {
-        tournamentMatches.push([shuffled[shuffled.length - 1]]); // bye
-      }
-      log('Random matches assigned');
-    }
+  startBtn.onclick = () => {
+    const mode = document.getElementById("gameMode").value;
+    const timer = parseInt(document.getElementById("timer").value) || 0;
+    const players = JSON.parse(localStorage.getItem("joined_players") || "[]");
+    if (players.length < 1) return alert("At least one player must join.");
+    localStorage.setItem(joiningKey, "false");
+    localStorage.setItem(gameKey, JSON.stringify({ mode, players, timer }));
+    alert("Game started!");
+  };
 
-    function startGame() {
-      gameMode = gameModeSelect.value;
-      isTournament = tournamentToggle.checked;
-      if (players.length < 1) { alert('Need at least one player to start.'); return; }
-
-      if (isTournament && tournamentMatches.length === 0) {
-        // If manual assignment via selectors
-        const matchCount = Math.floor(players.length / 2);
-        tournamentMatches = [];
-        const used = new Set();
-        for (let i = 0; i < matchCount; ++i) {
-          const p1 = document.getElementById(`match_${i}_p1`).value;
-          const p2 = document.getElementById(`match_${i}_p2`).value;
-          if (p1 === p2 || used.has(p1) || used.has(p2)) {
-            alert('Invalid match setup');
-            return;
-          }
-          used.add(p1); used.add(p2);
-          tournamentMatches.push([p1, p2]);
-        }
-        // Any leftover => bye
-        const leftover = players.filter(p => !used.has(p));
-        leftover.forEach(p => tournamentMatches.push([p]));
-      } else if (!isTournament) {
-        tournamentMatches = players.map(p => [p]);
-      }
-
-      // Init scores
-      scores = {};
-      players.forEach(p => {
-        scores[p] = { score: (gameMode === 'practice' ? 0 : parseInt(gameMode) || 0), history: [], average: 0, total: 0 };
-      });
-      currentMatchIndex = 0;
-      matchWinners = [];
-      matchLosers = [];
-
-      setupSection.classList.add('hidden');
-      settingsSection.classList.add('hidden');
-      scoreForm.classList.remove('hidden');
-      startMatch();
-    }
-
-    function startMatch() {
-      const match = tournamentMatches[currentMatchIndex];
-      matchScores = match.reduce((acc, p) => {
-        acc[p] = scores[p];
-        return acc;
-      }, {});
-      matchTitle.textContent = 'Match: ' + match.join(' vs ');
-      currentTurnIndex = 0;
-      updateTurnDisplay();
-      log(`Started match: ${match.join(' vs ')}`);
-      maybeStartTimer();
-      syncToStorage();
-    }
-
-    function updateTurnDisplay() {
-      const match = tournamentMatches[currentMatchIndex];
-      const player = match[currentTurnIndex];
-      currentTurnEl.textContent = `Current Player: ${player} (Score: ${scores[player].score})`;
-      throwInputs[0].focus();
-    }
-
-    function maybeStartTimer() {
-      clearTimer();
-      if (timerToggle.checked) {
-        timer = setTimeout(() => {
-          log('Turn timed out! Switching turn.');
-          nextTurn();
-        }, timerDuration.value * 1000);
-      }
-    }
-
-    function clearTimer() {
-      if (timer) clearTimeout(timer);
-      timer = null;
-    }
-
-    function submitScore() {
-      clearTimer();
-      const [t1, t2, t3] = throwInputs.map(inp => parseInt(inp.value) || 0);
-      throwInputs.forEach(inp => inp.value = '');
-      const total = t1 + t2 + t3;
-      const match = tournamentMatches[currentMatchIndex];
-      const player = match[currentTurnIndex];
-      let newScore = scores[player].score;
-      if (gameMode === 'practice') {
-        scores[player].total += total;
-      } else {
-        newScore -= total;
-        if (newScore < 0) {
-          log(`${player} busts with ${total} (score stays ${scores[player].score})`);
-        } else {
-          scores[player].score = newScore;
-          scores[player].history.push(total);
-          scores[player].total += total;
-          const sumThrows = scores[player].history.reduce((a,b) => a+b,0);
-          scores[player].average = (sumThrows / scores[player].history.length).toFixed(2);
-          log(`${player} scored ${total}, new score: ${newScore}`);
-          if (newScore === 0) {
-            log(`${player} wins the match!`);
-            matchWinners.push(player);
-            matchLosers.push(match.find(p => p !== player));
-            currentMatchIndex++;
-            if (currentMatchIndex >= tournamentMatches.length) {
-              finishTournament();
-              return;
-            }
-            startMatch();
-            return;
-          }
-        }
-      }
-      nextTurn();
-      syncToStorage();
-    }
-
-    function nextTurn() {
-      const match = tournamentMatches[currentMatchIndex];
-      currentTurnIndex = (currentTurnIndex + 1) % match.length;
-      updateTurnDisplay();
-      maybeStartTimer();
-    }
-
-    function finishTournament() {
-      const remaining = players.filter(p => !matchWinners.includes(p) && !matchLosers.includes(p));
-      const placements = [...matchWinners, ...matchLosers, ...remaining];
-      localStorage.removeItem('darts_game');
-      localStorage.setItem('darts_final_results', JSON.stringify(placements));
-      log('Tournament complete!');
-      scoreForm.classList.add('hidden');
-      setupSection.classList.remove('hidden');
-      settingsSection.classList.remove('hidden');
-    }
-
-    function syncToStorage() {
-      localStorage.setItem('darts_game', JSON.stringify({
-        players: tournamentMatches[currentMatchIndex],
-        scores,
-        currentTurnIndex,
-      }));
-    }
-
-    // Logo screen: toggles localStorage flag
-    logoBtn.addEventListener('click', () => {
-      const active = !logoBtn.classList.contains('active');
-      logoBtn.classList.toggle('active', active);
-      localStorage.setItem('darts_logo', JSON.stringify({ show: active, ts: Date.now() }));
-    });
-
-    // Init
-    addPlayerBtn.addEventListener('click', addPlayer);
-    randomAssignBtn.addEventListener('click', () => { randomAssignMatches(); renderPlayerList(); });
-    startGameBtn.addEventListener('click', startGame);
-    renderPlayerList();
-
-  </script>
+  logoBtn.onclick = () => {
+    logoOn = !logoOn;
+    localStorage.setItem(logoKey, logoOn ? "on" : "off");
+    logoBtn.classList.toggle("logo-on", logoOn);
+  };
+</script>
 </body>
 </html>
