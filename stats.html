@@ -1,89 +1,128 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Darts Stats</title>
-<style>
-body {
-  background-color: #121212;
-  color: #ffcc00;
-  font-family: Arial, sans-serif;
-  padding: 30px;
-}
-h1 {
-  text-align: center;
-  margin-bottom: 20px;
-  text-shadow: 0 0 6px #ffcc00;
-}
-table {
-  margin: 0 auto;
-  border-collapse: collapse;
-  width: 70%;
-  max-width: 600px;
-}
-th, td {
-  border: 1px solid #ffcc00;
-  padding: 12px 15px;
-  text-align: center;
-}
-th {
-  background-color: #333300;
-}
-tbody tr:hover {
-  background-color: #444400;
-}
-</style>
+  <meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Darts Stats & Join</title>
+  <style>
+    body { background: #121212; color: #ffcc00; font-family: Arial, sans-serif; margin:0; padding:20px; }
+    h1 { text-align:center; margin-bottom:20px; }
+    #joinSection, #statsSection { max-width: 400px; margin: auto; }
+    input, button { padding:10px; margin:5px 0; font-size:1rem; width:100%; }
+    #video { width: 100%; border: 2px solid #ffcc00; border-radius: 4px; display: none; }
+    #snapBtn { margin-top: 10px; }
+    #photo { width: 100%; display: none; border: 2px solid #ffcc00; border-radius: 4px; }
+    #statsTable { width: 100%; border-collapse: collapse; margin-top: 20px; }
+    #statsTable th, #statsTable td { border:1px solid #ffcc00; padding: 8px; text-align:left; }
+    #logoOverlay { position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.8); display:none; align-items:center; justify-content:center; z-index:2000; transition: opacity 0.5s; }
+    #logoOverlay img { max-width:80%; max-height:80%; opacity:0; transition: opacity 1s; }
+  </style>
 </head>
 <body>
+  <h1>Darts: Join & Stats</h1>
 
-<h1>Player Statistics</h1>
+  <div id="joinSection">
+    <input type="text" id="playerNameInput" placeholder="Your Name" />
+    <video id="video" autoplay></video>
+    <img id="photo" />
+    <button id="startCamBtn">Start Camera & Take Photo</button>
+    <button id="joinGameBtn" class="hidden">Join Game</button>
+  </div>
 
-<table>
-  <thead>
-    <tr>
-      <th>Player</th>
-      <th>Games Played</th>
-      <th>Wins</th>
-      <th>Avg Score per Throw</th>
-      <th>Win %</th>
-    </tr>
-  </thead>
-  <tbody id="statsBody"></tbody>
-</table>
+  <div id="statsSection" class="hidden">
+    <h2>Your Stats</h2>
+    <table id="statsTable">
+      <tr><th>Name</th><td id="statName"></td></tr>
+      <tr><th>Total Score</th><td id="statTotal"></td></tr>
+      <tr><th>Average Score</th><td id="statAvg"></td></tr>
+      <tr><th>Games Played</th><td id="statGames"></td></tr>
+    </table>
+  </div>
 
-<script>
-function loadStats() {
-  const stats = JSON.parse(localStorage.getItem("darts_stats")) || {};
-  const players = Object.keys(stats);
+  <div id="logoOverlay"><img id="logoImg" src="assets/logo.png" /></div>
 
-  if (players.length === 0) {
-    document.getElementById("statsBody").innerHTML = `<tr><td colspan="5">No stats available.</td></tr>`;
-    return;
-  }
+  <script>
+    const playerNameInput = document.getElementById('playerNameInput');
+    const startCamBtn = document.getElementById('startCamBtn');
+    const joinGameBtn = document.getElementById('joinGameBtn');
+    const video = document.getElementById('video');
+    const photo = document.getElementById('photo');
+    const joinSection = document.getElementById('joinSection');
+    const statsSection = document.getElementById('statsSection');
+    const statName = document.getElementById('statName');
+    const statTotal = document.getElementById('statTotal');
+    const statAvg = document.getElementById('statAvg');
+    const statGames = document.getElementById('statGames');
+    const logoOverlay = document.getElementById('logoOverlay');
+    const logoImg = document.getElementById('logoImg');
 
-  const rows = players.map((player) => {
-    const { gamesPlayed, wins, totalScore, throwsCount } = stats[player];
-    const avgScore = throwsCount > 0 ? (totalScore / throwsCount).toFixed(2) : "0.00";
-    const winPercent = gamesPlayed > 0 ? ((wins / gamesPlayed) * 100).toFixed(1) : "0.0";
+    let player = '';
+    let stream = null;
 
-    return `
-      <tr>
-        <td>${player}</td>
-        <td>${gamesPlayed}</td>
-        <td>${wins}</td>
-        <td>${avgScore}</td>
-        <td>${winPercent}%</td>
-      </tr>
-    `;
-  });
+    startCamBtn.addEventListener('click', async () => {
+      player = playerNameInput.value.trim();
+      if (!player) { alert('Enter your name first'); return; }
+      if (!stream) {
+        try {
+          stream = await navigator.mediaDevices.getUserMedia({ video: true });
+          video.srcObject = stream;
+          video.style.display = 'block';
+          startCamBtn.textContent = 'Capture Photo';
+        } catch (e) {
+          alert('Camera error: ' + e.message);
+          return;
+        }
+      } else {
+        const canvas = document.createElement('canvas');
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        canvas.getContext('2d').drawImage(video, 0, 0);
+        photo.src = canvas.toDataURL('image/png');
+        photo.style.display = 'block';
+        video.style.display = 'none';
+        joinGameBtn.classList.remove('hidden');
+        startCamBtn.disabled = true;
+        stream.getTracks().forEach(t => t.stop());
+      }
+    });
 
-  document.getElementById("statsBody").innerHTML = rows.join("");
-}
+    joinGameBtn.addEventListener('click', () => {
+      const data = JSON.parse(localStorage.getItem('darts_game') || '{}');
+      if (!data.players) { alert('No game in progress'); return; }
+      const stats = JSON.parse(localStorage.getItem('darts_stats') || '{}');
+      if (!stats[player]) stats[player] = { total: 0, throws: [], games: 0 };
 
-loadStats();
-</script>
+      stats[player].total = data.scores[player]?.total ?? stats[player].total;
+      stats[player].throws = data.scores[player]?.history ?? stats[player].throws;
+      stats[player].games++;
+      stats[player].average = stats[player].throws.length ? (stats[player].throws.reduce((a,b)=>a+b,0) / stats[player].throws.length).toFixed(2) : 0;
 
+      localStorage.setItem('darts_stats', JSON.stringify(stats));
+      showStats(player, stats[player]);
+    });
+
+    function showStats(name, s) {
+      statName.textContent = name;
+      statTotal.textContent = s.total;
+      statAvg.textContent = s.average;
+      statGames.textContent = s.games;
+      statsSection.classList.remove('hidden');
+    }
+
+    // Logo overlay logic
+    function checkLogo() {
+      const d = localStorage.getItem('darts_logo');
+      if (!d) return;
+      const { show } = JSON.parse(d);
+      if (show) {
+        logoOverlay.style.display = 'flex';
+        setTimeout(() => { logoImg.style.opacity = 1; }, 50);
+      } else {
+        logoImg.style.opacity = 0;
+        setTimeout(() => { logoOverlay.style.display = 'none'; }, 500);
+      }
+    }
+    window.addEventListener('storage', checkLogo);
+    checkLogo();
+  </script>
 </body>
 </html>
-
