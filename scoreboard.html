@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Darts Scoreboard</title>
+  <style>
+    body {
+      font-family: 'Arial', sans-serif;
+      background-color: #111;
+      color: #fff;
+      padding: 20px;
+      text-align: center;
+    }
+    h1 {
+      color: #ffcc00;
+    }
+    .player {
+      margin: 10px;
+      padding: 15px;
+      background: #222;
+      border-radius: 8px;
+    }
+    .active {
+      border: 2px solid #ffcc00;
+    }
+    .player h2 {
+      margin: 0;
+    }
+    .score {
+      font-size: 2rem;
+      color: #0f0;
+    }
+    .average {
+      font-size: 0.9rem;
+      color: #aaa;
+    }
+  </style>
+</head>
+<body>
+  <h1>Darts Scoreboard</h1>
+  <div id="scoreboard"></div>
+
+  <script>
+    function render() {
+      const data = localStorage.getItem('darts_game');
+      if (!data) {
+        document.getElementById('scoreboard').innerHTML = '<p>No game in progress</p>';
+        return;
+      }
+
+      const { players, scores, currentPlayerIndex } = JSON.parse(data);
+      const sb = document.getElementById('scoreboard');
+      sb.innerHTML = players.map((p, i) => {
+        const s = scores[p];
+        return `
+          <div class="player ${i === currentPlayerIndex ? 'active' : ''}">
+            <h2>${p}</h2>
+            <div class="score">${s.score}</div>
+            <div class="average">Avg: ${s.average}</div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    render();
+    setInterval(render, 1000); // Poll every second for updates
+  </script>
+</body>
+</html>
